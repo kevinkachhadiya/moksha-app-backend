@@ -2,11 +2,24 @@ using MAPI.Controllers;
 using MAPI.Models;
 using MAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationModel;
+using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using MAPI;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDataProtection().UseCryptographicAlgorithms(
+    new AuthenticatedEncryptorConfiguration
+    {
+        EncryptionAlgorithm = EncryptionAlgorithm.AES_256_CBC,
+        ValidationAlgorithm = ValidationAlgorithm.HMACSHA256
+    });
+
+// 2. KeepAlive Service Configuration
+builder.Services.AddHostedService<KeepAliveService>();
 
 // Add services to the container.
 builder.Services.AddScoped<StockService>();
@@ -50,7 +63,19 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
+
 var app = builder.Build();
+if (!app.Environment.IsDevelopment())
+{
+    var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+    app.Urls.Add($"http://0.0.0.0:{port}");
+    Console.WriteLine($"[INFO] Running on port {port}");
+    builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DevDB")));
+
+
+}
+
 
 app.UseSwagger();
 app.UseSwaggerUI();
@@ -63,5 +88,6 @@ app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=AuthController}/{action=Authenticate}/{id?}");
+
 
 app.Run();
