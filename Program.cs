@@ -22,9 +22,6 @@ builder.Services.AddDataProtection()
         ValidationAlgorithm = ValidationAlgorithm.HMACSHA256
     });
 
-// KeepAlive Service Configuration
-builder.Services.AddHostedService<KeepAliveService>();
-
 // Add Services to the Container
 builder.Services.AddScoped<StockService>();
 builder.Services.AddScoped<BillingServices>();
