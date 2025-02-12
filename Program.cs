@@ -12,9 +12,10 @@ using MAPI;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var keysDirectory = Environment.GetEnvironmentVariable("KEYS_DIRECTORY") ?? "/app/keys";
+Directory.CreateDirectory(keysDirectory); // Ensure directory exists
 builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(@"/app/keys"))
-    .SetApplicationName("MAPI")
+    .PersistKeysToFileSystem(new DirectoryInfo(keysDirectory))
     .UseCryptographicAlgorithms(new AuthenticatedEncryptorConfiguration
     {
         EncryptionAlgorithm = EncryptionAlgorithm.AES_256_CBC,
