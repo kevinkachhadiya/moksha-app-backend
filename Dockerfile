@@ -5,6 +5,14 @@ FROM mcr.microsoft.com/dotnet/aspnet:7.0 AS base
 WORKDIR /app
 EXPOSE 80
 
+# Create a directory for Data Protection keys
+RUN mkdir -p /app/keys
+
+# Set environment variable for key storage location
+ENV KEYS_DIRECTORY=/app/keys
+
+# Mount volume for persistent storage
+VOLUME ["/app/keys"]
 
 # This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
@@ -25,4 +33,5 @@ RUN dotnet publish "./MAPI.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:Us
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
 ENTRYPOINT ["dotnet", "MAPI.dll"]
