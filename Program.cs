@@ -12,23 +12,6 @@ using MAPI;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var keysDirectory = Environment.GetEnvironmentVariable("KEYS_DIRECTORY") ?? "/app/keys";
-
-// Ensure the directory exists and has proper permissions
-if (!Directory.Exists(keysDirectory))
-{
-    Directory.CreateDirectory(keysDirectory);
-}
-
-// Data Protection Configuration
-var dataProtectionBuilder = builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(keysDirectory))
-    .SetApplicationName("MyStockBillingApp")  // Unique name for key isolation
-    .UseCryptographicAlgorithms(new AuthenticatedEncryptorConfiguration
-    {
-        EncryptionAlgorithm = EncryptionAlgorithm.AES_256_CBC,
-        ValidationAlgorithm = ValidationAlgorithm.HMACSHA256
-    });
 
 // Add Services to the Container
 builder.Services.AddScoped<StockService>();
@@ -39,6 +22,14 @@ var environment = builder.Environment.EnvironmentName;
 
 if (builder.Environment.IsDevelopment())
 {
+    // In development, keys are kept in memory.
+    builder.Services.AddDataProtection()
+        .UseCryptographicAlgorithms(new AuthenticatedEncryptorConfiguration
+        {
+            EncryptionAlgorithm = EncryptionAlgorithm.AES_256_CBC,
+            ValidationAlgorithm = ValidationAlgorithm.HMACSHA256
+        });
+
     // Development (Local) - Use SQL Server
     var devDbConnection = builder.Configuration.GetConnectionString("DevDB")
                           ?? throw new ArgumentNullException("DevDB connection string is missing.");
@@ -47,6 +38,18 @@ if (builder.Environment.IsDevelopment())
 }
 else
 {
+    // In production, persist keys to a folder.
+    // (Make sure that the directory is persistent. On Render, you might mount a volume at /app/keys.)
+    var keysDirectory = Environment.GetEnvironmentVariable("KEYS_DIRECTORY") ?? "/app/keys";
+    Directory.CreateDirectory(keysDirectory); // Ensure directory exists
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(keysDirectory))
+        .UseCryptographicAlgorithms(new AuthenticatedEncryptorConfiguration
+        {
+            EncryptionAlgorithm = EncryptionAlgorithm.AES_256_CBC,
+            ValidationAlgorithm = ValidationAlgorithm.HMACSHA256
+        });
+
     // Production (Render) - Use PostgreSQL
     var prodDbConnection = Environment.GetEnvironmentVariable("DATABASE_URL")
                            ?? throw new ArgumentNullException("DATABASE_URL is missing.");
