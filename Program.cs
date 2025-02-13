@@ -5,13 +5,12 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationModel;
 using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using MAPI;
 
 var builder = WebApplication.CreateBuilder(args);
-
 
 // Add Services to the Container
 builder.Services.AddScoped<StockService>();
@@ -19,10 +18,11 @@ builder.Services.AddScoped<BillingServices>();
 
 // Environment-based Database Configuration
 var environment = builder.Environment.EnvironmentName;
+var configuration = builder.Configuration;
 
+// Data Protection Configuration
 if (builder.Environment.IsDevelopment())
 {
-    // In development, keys are kept in memory.
     builder.Services.AddDataProtection()
         .UseCryptographicAlgorithms(new AuthenticatedEncryptorConfiguration
         {
@@ -30,20 +30,15 @@ if (builder.Environment.IsDevelopment())
             ValidationAlgorithm = ValidationAlgorithm.HMACSHA256
         });
 
-    // Development (Local) - Use SQL Server
-    var devDbConnection = builder.Configuration.GetConnectionString("DevDB")
+    var devDbConnection = configuration.GetConnectionString("DevDB")
                           ?? throw new ArgumentNullException("DevDB connection string is missing.");
     builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(devDbConnection));
-    Console.WriteLine("[INFO] Using Development Database (SQL Server)");
 }
 else
 {
-    // In production, persist keys to a folder.
-    // (Make sure that the directory is persistent. On Render, you might mount a volume at /app/keys.)
     var keysDirectory = Environment.GetEnvironmentVariable("KEYS_DIRECTORY") ?? "/app/keys";
-    Directory.CreateDirectory(keysDirectory); // Ensure directory exists
+    Directory.CreateDirectory(keysDirectory);
 
-    // Configure Data Protection with key persistence and encryption
     builder.Services.AddDataProtection()
         .PersistKeysToFileSystem(new DirectoryInfo(keysDirectory))
         .UseCryptographicAlgorithms(new AuthenticatedEncryptorConfiguration
@@ -52,35 +47,40 @@ else
             ValidationAlgorithm = ValidationAlgorithm.HMACSHA256
         });
 
-    // Production (Render) - Use PostgreSQL
     var prodDbConnection = Environment.GetEnvironmentVariable("DATABASE_URL")
                            ?? throw new ArgumentNullException("DATABASE_URL is missing.");
-    builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(prodDbConnection));
-    Console.WriteLine("[INFO] Using Production Database (PostgreSQL)");
+
+    if (prodDbConnection.StartsWith("postgres://"))
+    {
+        prodDbConnection = ConvertPostgresUrlToConnectionString(prodDbConnection);
+    }
+   
+
+  //    builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(prodDbConnection));
 }
 
-// Authentication Configuration (JWT)
+// JWT Authentication Configuration
+var jwtIssuer = configuration["Jwt:Issuer"];
+var jwtAudience = configuration["Jwt:Audience"];
+var jwtKey = configuration["Jwt:Key"];
+
+if (string.IsNullOrEmpty(jwtIssuer) || string.IsNullOrEmpty(jwtAudience) || string.IsNullOrEmpty(jwtKey))
+{
+    throw new ArgumentException("JWT configuration values are missing. Check appsettings or environment variables.");
+}
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        var issuer = builder.Configuration["Jwt:Issuer"]
-                     ?? throw new ArgumentNullException("JWT_ISSUER is missing");
-
-        var audience =  builder.Configuration["Jwt:Audience"]
-                       ?? throw new ArgumentNullException("JWT_AUDIENCE is missing");
-
-        var key =  builder.Configuration["Jwt:Key"]
-                  ?? throw new ArgumentNullException("JWT_KEY is missing");
-
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = issuer,
-            ValidAudience = audience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key))
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
     });
 
@@ -88,17 +88,26 @@ builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddSwaggerGen();
 
-// Build the Application
 var app = builder.Build();
 
 // Configure Middleware
 app.UseSwagger();
 app.UseSwaggerUI();
-app.MapControllers();
+
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    RequireHeaderSymmetry = false,
+    ForwardLimit = null
+});
+
+// Correct order for authentication and authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Environment-Specific Configuration
+app.MapControllers();
+
+// Production-specific settings
 if (!app.Environment.IsDevelopment())
 {
     var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
@@ -109,7 +118,14 @@ if (!app.Environment.IsDevelopment())
 // Default Route
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=AuthController}/{action=Authenticate}/{id?}");
+    pattern: "{controller=Auth}/{action=Authenticate}/{id?}");
 
-// Run Application
 app.Run();
+
+// Helper Method for PostgreSQL Connection String Conversion
+static string ConvertPostgresUrlToConnectionString(string url)
+{
+    var uri = new Uri(url);
+    var userInfo = uri.UserInfo.Split(':');
+    return $"Host={uri.Host};Port={uri.Port};Username={userInfo[0]};Password={userInfo[1]};Database={uri.AbsolutePath.TrimStart('/')};SSL Mode=Require;Trust Server Certificate=true;";
+}
