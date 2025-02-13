@@ -10,7 +10,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Add Services to the Container
@@ -37,15 +36,11 @@ if (builder.Environment.IsDevelopment())
 }
 else
 {
-    var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
-                        ?? throw new ArgumentNullException("DATABASE_URL is missing");
-
-    // Add Data Protection Key Storage in PostgreSQL
-    builder.Services.AddDbContext<DataProtectionKeyContext>(options =>
-        options.UseNpgsql(connectionString));
+    var keysDirectory = Environment.GetEnvironmentVariable("KEYS_DIRECTORY") ?? "/app/keys";
+    Directory.CreateDirectory(keysDirectory);
 
     builder.Services.AddDataProtection()
-        .PersistKeysToDbContext<DataProtectionKeyContext>()
+        .PersistKeysToFileSystem(new DirectoryInfo(keysDirectory))
         .SetApplicationName("MAPI")
         .UseCryptographicAlgorithms(new AuthenticatedEncryptorConfiguration
         {
