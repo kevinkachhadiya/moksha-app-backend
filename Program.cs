@@ -46,7 +46,6 @@ else
     // Configure Data Protection with key persistence and encryption
     builder.Services.AddDataProtection()
         .PersistKeysToFileSystem(new DirectoryInfo(keysDirectory))
-        .ProtectKeysWithCertificate("thumbprint_of_your_certificate")
         .UseCryptographicAlgorithms(new AuthenticatedEncryptorConfiguration
         {
             EncryptionAlgorithm = EncryptionAlgorithm.AES_256_CBC,
