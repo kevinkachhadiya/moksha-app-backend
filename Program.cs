@@ -13,9 +13,17 @@ using MAPI;
 var builder = WebApplication.CreateBuilder(args);
 
 var keysDirectory = Environment.GetEnvironmentVariable("KEYS_DIRECTORY") ?? "/app/keys";
-Directory.CreateDirectory(keysDirectory); // Ensure directory exists
-builder.Services.AddDataProtection()
+
+// Ensure the directory exists and has proper permissions
+if (!Directory.Exists(keysDirectory))
+{
+    Directory.CreateDirectory(keysDirectory);
+}
+
+// Data Protection Configuration
+var dataProtectionBuilder = builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(keysDirectory))
+    .SetApplicationName("MyStockBillingApp")  // Unique name for key isolation
     .UseCryptographicAlgorithms(new AuthenticatedEncryptorConfiguration
     {
         EncryptionAlgorithm = EncryptionAlgorithm.AES_256_CBC,
