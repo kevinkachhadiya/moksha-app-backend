@@ -36,7 +36,7 @@ if (builder.Environment.IsDevelopment())
 }
 else
 {
-    var keysDirectory = Environment.GetEnvironmentVariable("KEYS_DIRECTORY") ?? "/app/keys";
+  /*  var keysDirectory = Environment.GetEnvironmentVariable("KEYS_DIRECTORY") ?? "/app/keys";
     Directory.CreateDirectory(keysDirectory);
 
     builder.Services.AddDataProtection()
@@ -47,6 +47,7 @@ else
             EncryptionAlgorithm = EncryptionAlgorithm.AES_256_CBC,
             ValidationAlgorithm = ValidationAlgorithm.HMACSHA256
         });
+  */
 
     var prodDbConnection = Environment.GetEnvironmentVariable("DATABASE_URL")
                            ?? throw new ArgumentNullException("DATABASE_URL is missing.");
