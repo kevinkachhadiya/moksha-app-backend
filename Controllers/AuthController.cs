@@ -59,7 +59,7 @@ namespace MAPI.Controllers
                 else
                 {
                     return Unauthorized();
-              }
+                }
                 
             
         }
@@ -99,7 +99,7 @@ namespace MAPI.Controllers
                   ValidAudience = "your-audience",  // Match the 'aud' in the token
                   ValidateLifetime = true,
                   ClockSkew = TimeSpan.FromMinutes(5), // To remove clock skew tolerance
-                  IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("your-very-secure-jwt-secret-key")) // The same key used to sign the token
+                  IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("your-very-secure-jwt-secret-key-001")) // The same key used to sign the token
         };
 
             try

@@ -61,9 +61,10 @@ else
 }
 
 // JWT Authentication Configuration
+var jwtKey = configuration["Jwt:Key"];
 var jwtIssuer = configuration["Jwt:Issuer"];
 var jwtAudience = configuration["Jwt:Audience"];
-var jwtKey = configuration["Jwt:Key"];
+
 
 if (string.IsNullOrEmpty(jwtIssuer) || string.IsNullOrEmpty(jwtAudience) || string.IsNullOrEmpty(jwtKey))
 {
@@ -73,15 +74,21 @@ if (string.IsNullOrEmpty(jwtIssuer) || string.IsNullOrEmpty(jwtAudience) || stri
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.RequireHttpsMetadata = false; // Set to true in production
+        options.SaveToken = true; // Allows token storage for later retrieval
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
+
             ValidIssuer = jwtIssuer,
             ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+
+            ClockSkew = TimeSpan.Zero // Prevents delayed token expiry issues
         };
     });
 
