@@ -42,8 +42,11 @@ else
     // (Make sure that the directory is persistent. On Render, you might mount a volume at /app/keys.)
     var keysDirectory = Environment.GetEnvironmentVariable("KEYS_DIRECTORY") ?? "/app/keys";
     Directory.CreateDirectory(keysDirectory); // Ensure directory exists
+
+    // Configure Data Protection with key persistence and encryption
     builder.Services.AddDataProtection()
         .PersistKeysToFileSystem(new DirectoryInfo(keysDirectory))
+        .ProtectKeysWithCertificate("thumbprint_of_your_certificate")
         .UseCryptographicAlgorithms(new AuthenticatedEncryptorConfiguration
         {
             EncryptionAlgorithm = EncryptionAlgorithm.AES_256_CBC,
@@ -56,6 +59,7 @@ else
     builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(prodDbConnection));
     Console.WriteLine("[INFO] Using Production Database (PostgreSQL)");
 }
+
 // Authentication Configuration (JWT)
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
