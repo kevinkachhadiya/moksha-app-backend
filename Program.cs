@@ -56,7 +56,6 @@ else
     builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(prodDbConnection));
     Console.WriteLine("[INFO] Using Production Database (PostgreSQL)");
 }
-
 // Authentication Configuration (JWT)
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
