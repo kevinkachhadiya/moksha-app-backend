@@ -50,16 +50,13 @@ else
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
-                     ?? builder.Configuration["Jwt:Issuer"]
+        var issuer = builder.Configuration["Jwt:Issuer"]
                      ?? throw new ArgumentNullException("JWT_ISSUER is missing");
 
-        var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
-                       ?? builder.Configuration["Jwt:Audience"]
+        var audience =  builder.Configuration["Jwt:Audience"]
                        ?? throw new ArgumentNullException("JWT_AUDIENCE is missing");
 
-        var key = Environment.GetEnvironmentVariable("JWT_KEY")
-                  ?? builder.Configuration["Jwt:Key"]
+        var key =  builder.Configuration["Jwt:Key"]
                   ?? throw new ArgumentNullException("JWT_KEY is missing");
 
         options.TokenValidationParameters = new TokenValidationParameters
