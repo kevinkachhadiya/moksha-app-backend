@@ -1,4 +1,4 @@
-version: "3.8"
+﻿version: "3.8"
 services:
   myapp:
     image: myapp:latest
@@ -7,4 +7,4 @@ services:
     environment:
       - KEYS_DIRECTORY=/app/keys
     volumes:
-      - ./keys:/app/keys  # Persist keys locally
+      - ./keys:/app/keys  # ✅ Persist keys locally
