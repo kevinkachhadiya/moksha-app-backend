@@ -41,7 +41,6 @@ else
 
     builder.Services.AddDataProtection()
         .PersistKeysToFileSystem(new DirectoryInfo(keysDirectory))
-        .ProtectKeysWithDpapi()
         .SetApplicationName("MyApp")
         .UseCryptographicAlgorithms(new AuthenticatedEncryptorConfiguration
         {
