@@ -138,7 +138,7 @@ namespace MAPI.Services
             stock.Weight = updateStockDto.Weight;
 
             // Update the AvailableStock based on the new values
-            stock.removeStock(stock.TotalWeight);
+            stock.RemoveStock(stock.TotalWeight);
 
             // Save changes to the database
             await _context.SaveChangesAsync();

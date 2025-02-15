@@ -1,24 +1,24 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Collections.Generic;
+using Microsoft.EntityFrameworkCore;  // Required for Index attribute
 
 namespace MAPI.Models
 {
-    // Material class
+    [Index(nameof(ColorName), IsUnique = true)]  // Creates unique constraint in database
     public class Material
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]  // Auto-increment in SQL Server
-        public int Id { get; set; }  // Primary Key
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
 
         [Required]
-       
-        public string ColorName { get; set; }  // Color of the material
+        [StringLength(100)]  // Added length limit
+        public string ColorName { get; set; } = null!;  // Non-nullable with initialization
 
         [Required]
-        public decimal BasePrice { get; set; }  // Base price of the material
-    }
-
-  
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal BasePrice { get; set; }
     
+    
+    }
 }

@@ -33,7 +33,10 @@ if (env.IsDevelopment())
 
     var devDbConnection = builder.Configuration.GetConnectionString("DevDB")
                           ?? throw new ArgumentNullException("DevDB connection string is missing.");
-    builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(devDbConnection));
+    builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(devDbConnection));
+  
+    builder.Services.AddDataProtection()
+        .PersistKeysToDbContext<AppDbContext>();
 }
 else
 {
@@ -41,11 +44,11 @@ else
                            ?? throw new ArgumentNullException("DATABASE_URL is missing.");
 
     // Register Data Protection Key Storage in PostgreSQL
-    builder.Services.AddDbContext<DataProtectionKeyContext>(options =>
+    builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseNpgsql(prodDbConnection));
 
     builder.Services.AddDataProtection()
-        .PersistKeysToDbContext<DataProtectionKeyContext>();
+        .PersistKeysToDbContext<AppDbContext>();
 
    
 

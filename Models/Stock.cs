@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿#nullable enable  // Enable nullable reference types
+
+using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 
 namespace MAPI.Models
@@ -6,33 +8,31 @@ namespace MAPI.Models
     public class Stock
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]  // Auto-increment primary key
-        public int StockId { get; set; }  // Primary Key for stock record
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int StockId { get; set; }
 
         [Required]
-        public int MaterialId { get; set; }  // Foreign Key to Material
+        public int MaterialId { get; set; }
 
         [Required]
-        public int TotalBags { get; set; }  // Total number of bags in stock
+        public int TotalBags { get; set; }
 
         [Required]
-        [Column(TypeName = "decimal(18,2)")]  // Weight per bag
+        [Column(TypeName = "decimal(18,2)")]
         public decimal Weight { get; set; }
 
-        // Calculated property for total weight
         [Column(TypeName = "decimal(18,2)")]
-        public decimal TotalWeight => TotalBags * Weight;  // Total weight = TotalBags * Weight per bag
+        public decimal TotalWeight => TotalBags * Weight;
 
-        // Available stock after purchases or sales
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal AvailableStock { get; set; }  // Track how much stock is available
-
-        // Navigation property to Material
-        public Material Material { get; set; }
+        [Column(TypeName = "decimal(18,2)")]  // Add this to AvailableStock
+        public decimal AvailableStock { get; set; }
 
 
-        // Method to update available stock (e.g., after a sale)
-        public void removeStock(decimal quantitySold)
+        // Change to non-nullable if relationship is required
+        public Material Material { get; set; } = null!;  // Remove '?' and initialize
+        
+
+        public void RemoveStock(decimal quantitySold)
         {
             if (quantitySold <= AvailableStock)
             {
@@ -44,22 +44,16 @@ namespace MAPI.Models
             }
         }
 
-        public void AddStock(int bagsAdded, decimal Weightperbag)
+        public void AddStock(int bagsAdded, decimal weightPerBag)
         {
-            // Validate if the weight per bag is a positive number
-            if (Weightperbag <= 0)
+            if (weightPerBag <= 0)
             {
                 throw new ArgumentException("Weight per bag must be greater than zero.");
             }
 
-            // Update the weight per bag for this stock entry
-            Weight = Weightperbag;
-
-            // Update the total number of bags in stock
-            TotalBags = bagsAdded;
-
-            // Update the AvailableStock based on the weight of the new bags
-            AvailableStock += TotalWeight;
+            Weight = weightPerBag;
+            TotalBags += bagsAdded;  // Changed to += instead of =
+            AvailableStock += bagsAdded * weightPerBag;
         }
     }
 }

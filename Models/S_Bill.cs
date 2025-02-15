@@ -27,7 +27,7 @@ namespace MAPI.Models
 
         [Required]
         public PaymentMethodTypes PaymentMethod { get; set; }
-        
+
         [Required]
         [NotMapped]
         public DateOnly DueDate { get; set; }
@@ -52,10 +52,10 @@ namespace MAPI.Models
         }
 
         public enum status
-        { 
-               Pending,
-               OverDue,
-               Completed
+        {
+            Pending,
+            OverDue,
+            Completed
         }
     }
 
@@ -67,7 +67,7 @@ namespace MAPI.Models
         public int ID { get; set; }
 
         [Required]
-        public int P_Stock_Id{ get; set; }
+        public int P_Stock_Id { get; set; }
 
         [Required]
         public int St_Bags { get; set; }
@@ -84,6 +84,6 @@ namespace MAPI.Models
         public decimal price { get; set; }
         public Stock Stock { get; set; }
 
-        
+
     }
 }
