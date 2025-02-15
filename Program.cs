@@ -37,20 +37,17 @@ if (env.IsDevelopment())
 }
 else
 {
-    var keysDirectory = Environment.GetEnvironmentVariable("KEYS_DIRECTORY") ?? "/app/keys";
-    Directory.CreateDirectory(keysDirectory);
-
-    builder.Services.AddDataProtection()
-        .PersistKeysToFileSystem(new DirectoryInfo(keysDirectory))
-        .SetApplicationName("MAPI-App")
-        .UseCryptographicAlgorithms(new AuthenticatedEncryptorConfiguration
-        {
-            EncryptionAlgorithm = EncryptionAlgorithm.AES_256_CBC,
-            ValidationAlgorithm = ValidationAlgorithm.HMACSHA256
-        });
-
     var prodDbConnection = Environment.GetEnvironmentVariable("DATABASE_URL")
                            ?? throw new ArgumentNullException("DATABASE_URL is missing.");
+
+    // Register Data Protection Key Storage in PostgreSQL
+    builder.Services.AddDbContext<DataProtectionKeyContext>(options =>
+        options.UseNpgsql(prodDbConnection));
+
+    builder.Services.AddDataProtection()
+        .PersistKeysToDbContext<DataProtectionKeyContext>();
+
+   
 
     if (prodDbConnection.StartsWith("postgres://"))
     {
