@@ -17,12 +17,14 @@ namespace MAPI.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IConfiguration _configuration;
+        private readonly AppDbContext _context;
 
 
         // Constructor to get the configuration
-        public AuthController(IConfiguration configuration)
+        public AuthController(AppDbContext context, IConfiguration configuration)
         {
             _configuration = configuration;
+            _context = context;
 
         }
         [HttpGet("ValidateToken")]
@@ -131,7 +133,7 @@ namespace MAPI.Controllers
                             // Fetch the user from the database or return a mock user
                             var user = GetAdminFromDatabase(userName);
 
-                            return user; // Return the admin user
+                            return  user; // Return the admin user
                         }
                         else
                         {
@@ -200,15 +202,8 @@ namespace MAPI.Controllers
         // Example method to retrieve a user from your database (replace with actual database access code)
         private User GetAdminFromDatabase(string username)
         {
-            // Replace with actual database query logic
-            // For example, using Entity Framework or raw SQL to query your admin table
-            return new User
-            {
-                Id = 1,
-                Username = "admin",  // Example username
-                IsAdmin = true,      // Example flag to indicate if the user is an admin
-                PasswordHash = "admin@123" // Example password (hashed in real applications)
-            };
+            var user_data = _context.user.FirstOrDefault(u => u.Username == username);
+            return  user_data ?? new Models.User();
         }
 
         // Method to generate the JWT token
@@ -228,7 +223,7 @@ namespace MAPI.Controllers
                 issuer: _configuration["Jwt:Issuer"],
                 audience: _configuration["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddDays(1),
+                expires: DateTime.UtcNow.AddDays(1), // Use UTC time to avoid timezone issues
                 signingCredentials: creds
             );
 

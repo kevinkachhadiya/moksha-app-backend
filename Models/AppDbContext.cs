@@ -16,6 +16,8 @@ namespace MAPI.Models
         public DbSet<S_BillItem> S_BillItems { get; set; }
         public DbSet<Stock> Stocks { get; set; }
 
+        public DbSet<User> user { get; set; }
+
         // ✅ Ensure correct property name, type, and namespace
         // Implementing IDataProtectionKeyContext
         public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
