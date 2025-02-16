@@ -111,6 +111,7 @@ app.MapControllers();
 if (!env.IsDevelopment())
 {
     var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
+    builder.Configuration["Kestrel:Endpoints:Http:Url"] = $"http://0.0.0.0:{port}";
     app.Urls.Add($"http://0.0.0.0:{port}");
     Console.WriteLine($"[INFO] Running on port {port}");
 }
