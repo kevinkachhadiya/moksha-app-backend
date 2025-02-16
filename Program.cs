@@ -91,7 +91,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("RenderPolicy", policy =>
     {
-        // Ensure that your production frontend URL is included.
+        // Ensure that your production backend URL is included.
         policy.WithOrigins("https://moksha-app-frontend.onrender.com", "http://localhost", "https://moksha-app-backend.onrender.com")
               .AllowAnyHeader()
               .AllowAnyMethod()
