@@ -1,66 +1,41 @@
-using MAPI.Controllers;
+﻿using MAPI.Controllers;
 using MAPI.Models;
-using MAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
-using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationModel;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System.IO;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Add Services to the Container
-builder.Services.AddScoped<StockService>();
-builder.Services.AddScoped<BillingServices>();
-
-// Load Environment Variables
-builder.Configuration.AddEnvironmentVariables();
 var env = builder.Environment;
 
-// Data Protection Configuration
+// ✅ Load Environment Variables
+builder.Configuration.AddEnvironmentVariables();
+
+// ✅ Configure Database Connection
+string connectionString;
 if (env.IsDevelopment())
 {
-    builder.Services.AddDataProtection()
-        .UseCryptographicAlgorithms(new AuthenticatedEncryptorConfiguration
-        {
-            EncryptionAlgorithm = EncryptionAlgorithm.AES_256_CBC,
-            ValidationAlgorithm = ValidationAlgorithm.HMACSHA256
-        });
-
-    var devDbConnection = builder.Configuration.GetConnectionString("DevDB")
-                          ?? throw new ArgumentNullException("DevDB connection string is missing.");
-    builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(devDbConnection));
-  
-    builder.Services.AddDataProtection()
-        .PersistKeysToDbContext<AppDbContext>();
+    connectionString = builder.Configuration.GetConnectionString("DevDB")
+                       ?? throw new ArgumentNullException("DevDB connection string is missing.");
 }
 else
 {
-    var prodDbConnection = Environment.GetEnvironmentVariable("DATABASE_URL")
-                           ?? throw new ArgumentNullException("DATABASE_URL is missing.");
+    connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
+                       ?? throw new ArgumentNullException("DATABASE_URL is missing.");
 
-    // Register Data Protection Key Storage in PostgreSQL
-    builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseNpgsql(prodDbConnection));
-
-    builder.Services.AddDataProtection()
-        .PersistKeysToDbContext<AppDbContext>();
-
-   
-
-    if (prodDbConnection.StartsWith("postgres://"))
+    if (connectionString.StartsWith("postgres://"))
     {
-        prodDbConnection = ConvertPostgresUrlToConnectionString(prodDbConnection);
+        connectionString = ConvertPostgresUrlToConnectionString(connectionString);
     }
-
-    builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(prodDbConnection));
 }
 
-// JWT Authentication Configuration
+builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddDataProtection()
+    .PersistKeysToDbContext<AppDbContext>();
+
+// ✅ JWT Authentication Configuration
 var jwtConfig = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtConfig["Key"] ?? throw new ArgumentNullException("Jwt:Key is missing");
 var jwtIssuer = jwtConfig["Issuer"] ?? throw new ArgumentNullException("Jwt:Issuer is missing");
@@ -87,6 +62,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddSwaggerGen();
+
+// ✅ CORS Configuration
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("RenderPolicy", policy =>
@@ -97,11 +74,10 @@ builder.Services.AddCors(options =>
         )
         .AllowAnyHeader()
         .AllowAnyMethod()
-        .AllowCredentials(); // Only works with specific origins (no wildcard *)
+        .AllowCredentials();
     });
 
-    // Allow localhost only in Development
-    if (builder.Environment.IsDevelopment())
+    if (env.IsDevelopment())
     {
         options.AddPolicy("DevPolicy", policy =>
         {
@@ -112,9 +88,10 @@ builder.Services.AddCors(options =>
         });
     }
 });
+
 var app = builder.Build();
 
-// Configure Middleware
+// ✅ Middleware Configuration
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseForwardedHeaders(new ForwardedHeadersOptions
@@ -124,26 +101,28 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardLimit = null
 });
 
+// ✅ Ensure CORS is Applied Before Authentication
+app.UseCors(env.IsDevelopment() ? "DevPolicy" : "RenderPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Production-specific settings
+// ✅ Production Port Fix
 if (!env.IsDevelopment())
 {
-    var port = Environment.GetEnvironmentVariable("PORT") ?? "10000"; // Use Render's port
+    var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
     app.Urls.Add($"http://0.0.0.0:{port}");
     Console.WriteLine($"[INFO] Running on port {port}");
-
 }
 
+// ✅ Default Route
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Auth}/{action=Authenticate}/{id?}");
 
 app.Run();
 
-// Helper Method for PostgreSQL Connection String Conversion
+// ✅ Helper: Convert Postgres URL to Connection String
 static string ConvertPostgresUrlToConnectionString(string url)
 {
     var uri = new Uri(url);

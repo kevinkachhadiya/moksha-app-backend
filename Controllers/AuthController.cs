@@ -71,7 +71,7 @@ namespace MAPI.Controllers
         public IActionResult Authenticate([FromBody] LoginModel login)
         {
             // Step 1: Validate the user credentials (username aind password)
-            var user = ValidateUserCredentials(login.Username, login.Password);
+            var user = ValidateUserCredentials(login.Username??"", login.Password??"");
 
             if (user == null)
             {
@@ -217,7 +217,7 @@ namespace MAPI.Controllers
             new Claim("IsAdmin", user.IsAdmin.ToString())  // Custom admin claim (optional)
         };
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]??""));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var token = new JwtSecurityToken(
                 issuer: _configuration["Jwt:Issuer"],
