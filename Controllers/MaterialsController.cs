@@ -23,7 +23,7 @@ namespace MAPI.Controllers
         {
             try
             {
-                var materials = await _context.Materials.ToListAsync();t
+                var materials = await _context.Materials.ToListAsync();
                 return Ok(materials);
             }
             catch (Exception ex)
