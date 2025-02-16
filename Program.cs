@@ -91,15 +91,27 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("RenderPolicy", policy =>
     {
-        // Ensure that your production backend URL is included.
-        policy.WithOrigins("https://moksha-app-frontend.onrender.com", "http://localhost", "https://moksha-app-backend.onrender.com")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+        policy.WithOrigins(
+            "https://moksha-app-frontend.onrender.com",
+            "https://moksha-app-backend.onrender.com"
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials(); // Only works with specific origins (no wildcard *)
     });
+
+    // Allow localhost only in Development
+    if (builder.Environment.IsDevelopment())
+    {
+        options.AddPolicy("DevPolicy", policy =>
+        {
+            policy.WithOrigins("http://localhost")
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        });
+    }
 });
-
-
 var app = builder.Build();
 
 // Configure Middleware
@@ -119,9 +131,10 @@ app.MapControllers();
 // Production-specific settings
 if (!env.IsDevelopment())
 {
-    var port = Environment.GetEnvironmentVariable("PORT") ?? "8090";
+    var port = Environment.GetEnvironmentVariable("PORT") ?? "10000"; // Use Render's port
     app.Urls.Add($"http://0.0.0.0:{port}");
-    Console.WriteLine($"[INFO] Running in Production on port {port}");
+    Console.WriteLine($"[INFO] Running on port {port}");
+
 }
 
 app.MapControllerRoute(
