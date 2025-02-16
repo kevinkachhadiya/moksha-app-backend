@@ -21,8 +21,22 @@ namespace MAPI.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Material>>> GetMaterials()
         {
-            return await _context.Materials.ToListAsync();
+            try
+            {
+                var materials = await _context.Materials.ToListAsync();
+                if (materials == null || materials.Count == 0)
+                {
+                    return NotFound("No materials found in the database.");
+                }
+                return Ok(materials);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GetMaterials: {ex.Message}");
+                return StatusCode(500, "Internal Server Error: " + ex.Message);
+            }
         }
+
 
         // GET: api/Materials/5
         [HttpGet("{id}")]
