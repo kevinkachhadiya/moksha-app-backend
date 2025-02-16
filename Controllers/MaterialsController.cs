@@ -24,19 +24,18 @@ namespace MAPI.Controllers
             try
             {
                 var materials = await _context.Materials.ToListAsync();
-                if (materials == null || materials.Count == 0)
+                if (materials == null || !materials.Any())
                 {
-                    return NotFound("No materials found in the database.");
+                    return NotFound("No materials found.");
                 }
                 return Ok(materials);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error in GetMaterials: {ex.Message}");
-                return StatusCode(500, "Internal Server Error: " + ex.Message);
+                Console.WriteLine($"Error in GetMaterials: {ex}");
+                return StatusCode(500, $"Internal Server Error: {ex.Message}");
             }
         }
-
 
         // GET: api/Materials/5
         [HttpGet("{id}")]
