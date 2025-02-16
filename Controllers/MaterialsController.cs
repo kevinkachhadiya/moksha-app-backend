@@ -23,11 +23,7 @@ namespace MAPI.Controllers
         {
             try
             {
-                var materials = await _context.Materials.ToListAsync();
-                if (materials == null || !materials.Any())
-                {
-                    return NotFound("No materials found.");
-                }
+                var materials = await _context.Materials.ToListAsync();t
                 return Ok(materials);
             }
             catch (Exception ex)
