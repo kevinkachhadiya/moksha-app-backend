@@ -37,9 +37,9 @@ builder.Services.AddDataProtection()
 
 // ✅ JWT Authentication Configuration
 var jwtConfig = builder.Configuration.GetSection("Jwt");
-var jwtKey = jwtConfig["Key"] ?? throw new ArgumentNullException("Jwt:Key is missing");
-var jwtIssuer = jwtConfig["Issuer"] ?? throw new ArgumentNullException("Jwt:Issuer is missing");
-var jwtAudience = jwtConfig["Audience"] ?? throw new ArgumentNullException("Jwt:Audience is missing");
+var jwtKey =Environment.GetEnvironmentVariable("JWT_KEY") ?? jwtConfig["Key"] ?? throw new ArgumentNullException("Jwt:Key is missing");
+var jwtIssuer =Environment.GetEnvironmentVariable("JWT_ISSUER") ?? jwtConfig["Issuer"] ?? throw new ArgumentNullException("Jwt:Issuer is missing");
+var jwtAudience =Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? jwtConfig["Audience"] ?? throw new ArgumentNullException("Jwt:Audience is missing");
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

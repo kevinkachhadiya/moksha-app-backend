@@ -96,12 +96,12 @@ namespace MAPI.Controllers
             {
                 
                   ValidateIssuer = true,
-                  ValidIssuer = "your-issuer",  // Match the 'iss' in the token
+                  ValidIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? _configuration["Jwt:Issuer"] ?? throw new ArgumentNullException("Jwt:Issuer is missing"),  // Match the 'iss' in the token
                   ValidateAudience = true,
-                  ValidAudience = "your-audience",  // Match the 'aud' in the token
+                  ValidAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? _configuration["Jwt:Audience"] ?? throw new ArgumentNullException("Jwt:Audience is missing"),  // Match the 'aud' in the token
                   ValidateLifetime = true,
                   ClockSkew = TimeSpan.FromMinutes(5), // To remove clock skew tolerance
-                  IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("your-very-secure-jwt-secret-key-001")) // The same key used to sign the token
+                  IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("JWT_KEY") ?? _configuration["Jwt:Key"] ?? throw new ArgumentNullException("Jwt:Key is missing"))) // The same key used to sign the token
         };
 
             try
@@ -166,8 +166,6 @@ namespace MAPI.Controllers
             catch (Exception ex)
             {
                 throw ex;
-               
-            
             }
 
             return null;  // Token is invalid or expired
@@ -217,11 +215,11 @@ namespace MAPI.Controllers
             new Claim("IsAdmin", user.IsAdmin.ToString())  // Custom admin claim (optional)
         };
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]??""));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("JWT_KEY") ?? _configuration["Jwt:Key"] ?? throw new ArgumentNullException("Jwt:Key is missing")));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
+                issuer: Environment.GetEnvironmentVariable("JWT_ISSUER") ?? _configuration["Jwt:Issuer"] ?? throw new ArgumentNullException("Jwt:Issuer is missing"),
+                audience: Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? _configuration["Jwt:Audience"] ?? throw new ArgumentNullException("Jwt:Audience is missing"),
                 claims: claims,
                 expires: DateTime.UtcNow.AddDays(1), // Use UTC time to avoid timezone issues
                 signingCredentials: creds
