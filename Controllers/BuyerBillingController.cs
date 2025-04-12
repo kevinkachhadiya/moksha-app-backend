@@ -21,7 +21,7 @@ namespace MAPI.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<B_Bill>>> GetBills()
         {
-            var bill = await _context.Bills
+            var bill = await _context.B_Bill
                              .Include(b => b.Items)          // Include the items
                              .ThenInclude(i => i.Material)   // Include the related material for each item
                              .ToListAsync();
@@ -32,7 +32,7 @@ namespace MAPI.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetBill(int billId)
         {
-            var bill = await _context.Bills
+            var bill = await _context.B_Bill
                                      .Include(b => b.Items)
                                      .ThenInclude(i => i.Material) // Eagerly load Material
                                      .FirstOrDefaultAsync(b => b.B_Id == billId);
@@ -44,13 +44,23 @@ namespace MAPI.Controllers
 
             return Ok(bill);
         }
-
-
         // POST: api/BuyerBilling
+        
         [HttpPost]
-        public async Task<IActionResult> CreateBill([FromBody] B_Bill bill)
+        public async Task<IActionResult> CreateBill([FromBody] Create_B_Bill_Dto Dto_b_bill)
         {
-            if (bill == null)
+            var bill = new B_Bill()
+            {
+                BillNo = await GenerateBillNoAsync(),
+                BuyerName = Dto_b_bill.BuyerName,
+                // Don't set B_Id - let the database generate it
+                Items = new List<B_BillItem>(),
+                IsPaid = Dto_b_bill.IsPaid,
+                PaymentMethod = Dto_b_bill.PaymentMethod
+            };
+
+
+            if (Dto_b_bill == null)
             {
                 return BadRequest("Bill data is null.");
             }
@@ -58,21 +68,26 @@ namespace MAPI.Controllers
             // Generate the BillNo before saving
             bill.BillNo = await GenerateBillNoAsync();
             bill.TotalBillPrice = 0;
-
-            // Loop through each item and fetch the corresponding material data
-            foreach (var item in bill.Items)
+            
+            foreach (var item in Dto_b_bill.Items)
             {
                 // Fetch the material from the database using MaterialId
                 var material = await _context.Materials.FindAsync(item.MaterialId);
+                var w_item = new B_BillItem() {};
+                
+
+
                 if (material != null)
                 {
-                    // Associate the material with the item and set its properties
-                    item.Material = material;
-
-                    item.Price = item.Price;
+                    w_item.MaterialId = material.Id;
+                    w_item.Quantity = item.Quantity;
+                    w_item.Price = item.Price;
+                    w_item.Material = material;
 
                     // Add the item's total price to the total bill price
-                    bill.TotalBillPrice += item.TotalPrice;  // item.TotalPrice is Price * Quantity
+                    bill.TotalBillPrice += w_item.TotalPrice;  // item.TotalPrice is Price * Quantity
+
+                    bill.Items.Add(w_item);
                 }
                 else
                 {
@@ -81,9 +96,15 @@ namespace MAPI.Controllers
                 }
             }
 
-            // Add the new bill to the context
-            _context.Bills.Add(bill);
+            if (bill.IsPaid == true)
+            {
+                _context.B_Bill.Add(bill);
 
+            }
+            else
+            {
+                return BadRequest("CheckBox is not marked");
+            }
             try
             {
                 // Save the changes to the database
@@ -103,7 +124,7 @@ namespace MAPI.Controllers
         private async Task<string> GenerateBillNoAsync()
         {
             // Get the most recent bill to generate the next BillNo
-            var lastBill = await _context.Bills
+            var lastBill = await _context.B_Bill
                                           .OrderByDescending(b => b.CreatedAt)
                                           .FirstOrDefaultAsync();
 
@@ -132,7 +153,7 @@ namespace MAPI.Controllers
             }
 
             // Fetch the bill from the database along with the associated items and materials
-            var existingBill = await _context.Bills.Include(b => b.Items)
+            var existingBill = await _context.B_Bill.Include(b => b.Items)
                                                     .ThenInclude(i => i.Material)
                                                     .FirstOrDefaultAsync(b => b.B_Id == id);
 
@@ -225,10 +246,10 @@ namespace MAPI.Controllers
             return NoContent();
         }
 
-        [HttpPost("print_buying_bile/{id}")]
+        [HttpGet("print_buying_bile")]
         public async Task<IActionResult> GenerateInvoiceForBill(int billId)
         {
-            var bill = await _context.Bills
+            var bill = await _context.B_Bill
                                      .Include(b => b.Items)
                                      .ThenInclude(i => i.Material) // Eagerly load Material
                                      .FirstOrDefaultAsync(b => b.B_Id == billId);
@@ -253,13 +274,11 @@ namespace MAPI.Controllers
             return File(fileBytes, "application/pdf", fileName); // Return the file with a content type of PDF
         }
 
-
-
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBill(int id)
         {
             // Find the bill including related items
-            var bill = await _context.Bills
+            var bill = await _context.B_Bill
                                      .Include(b => b.Items)
                                      .FirstOrDefaultAsync(b => b.B_Id == id);
 
@@ -272,7 +291,7 @@ namespace MAPI.Controllers
             _context.B_BillItem.RemoveRange(bill.Items);
 
             // Remove the bill itself
-            _context.Bills.Remove(bill);
+            _context.B_Bill.Remove(bill);
 
             try
             {

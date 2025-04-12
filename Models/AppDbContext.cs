@@ -10,7 +10,7 @@ namespace MAPI.Models
             : base(options) { }
 
         public DbSet<Material> Materials { get; set; }
-        public DbSet<B_Bill> Bills { get; set; }
+        public DbSet<B_Bill> B_Bill { get; set; }
         public DbSet<B_BillItem> B_BillItem { get; set; }
         public DbSet<S_Bill> S_Bills { get; set; }
         public DbSet<S_BillItem> S_BillItems { get; set; }
