@@ -22,14 +22,14 @@ namespace MAPI.Controllers
         public async Task<ActionResult<IEnumerable<B_Bill>>> GetBills()
         {
             var bill = await _context.B_Bill
-                             .Include(b => b.Items)          // Include the items
+                             .Include(b => b.Items)           // Include the items
                              .ThenInclude(i => i.Material)   // Include the related material for each item
                              .ToListAsync();
             return bill;
         }
 
         // GET: api/BuyerBilling/5
-        [HttpGet("{id}")]
+        [HttpGet("GetBillByid")]
         public async Task<IActionResult> GetBill(int billId)
         {
             var bill = await _context.B_Bill
@@ -37,15 +37,36 @@ namespace MAPI.Controllers
                                      .ThenInclude(i => i.Material) // Eagerly load Material
                                      .FirstOrDefaultAsync(b => b.B_Id == billId);
 
+
+            var editBillDto = new Create_B_Bill_Dto
+            {
+                BuyerName = bill.BuyerName,
+                IsPaid = bill.IsPaid,
+                PaymentMethod = bill.PaymentMethod,
+                Items = new List<B_BillItemDto>() 
+            };
+
             if (bill == null)
             {
                 return NotFound();
             }
 
-            return Ok(bill);
+            foreach (var item in bill.Items)
+            {
+               
+                editBillDto.Items.Add(new B_BillItemDto
+                {
+                    MaterialId = item.MaterialId,
+                    Quantity = item.Quantity,
+                    Price = item.Price
+                });
+
+            }
+
+            return Ok(editBillDto);
         }
-        // POST: api/BuyerBilling
         
+        // POST: api/BuyerBilling
         [HttpPost]
         public async Task<IActionResult> CreateBill([FromBody] Create_B_Bill_Dto Dto_b_bill)
         {
