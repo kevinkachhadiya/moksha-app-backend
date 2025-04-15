@@ -37,16 +37,19 @@ namespace MAPI.Controllers
                                      .ThenInclude(i => i.Material) // Eagerly load Material
                                      .FirstOrDefaultAsync(b => b.B_Id == billId);
 
+            dynamic editBillDto;
 
-            var editBillDto = new Create_B_Bill_Dto
+            if (bill != null)
             {
-                BuyerName = bill.BuyerName,
-                IsPaid = bill.IsPaid,
-                PaymentMethod = bill.PaymentMethod,
-                Items = new List<B_BillItemDto>() 
-            };
-
-            if (bill == null)
+                  editBillDto = new Create_B_Bill_Dto
+                {
+                    BuyerName = bill.BuyerName,
+                    IsPaid = bill.IsPaid,
+                    PaymentMethod = bill.PaymentMethod,
+                    Items = new List<B_BillItemDto>()
+                };
+            }
+            else
             {
                 return NotFound();
             }
@@ -165,50 +168,50 @@ namespace MAPI.Controllers
             return "B_1"; // Fallback if the format doesn't match
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateBill(int id, [FromBody] B_Bill bill)
+        [HttpPut("UpdateBill")]
+        public async Task<IActionResult> UpdateBill([FromBody] Edit_B_Bill_Dto bill)
         {
-            if (bill == null || bill.B_Id != id)
+            if (bill == null)
             {
                 return BadRequest("Bill data is invalid.");
             }
 
             // Fetch the bill from the database along with the associated items and materials
-            var existingBill = await _context.B_Bill.Include(b => b.Items)
-                                                    .ThenInclude(i => i.Material)
-                                                    .FirstOrDefaultAsync(b => b.B_Id == id);
+            var existingBill = await _context.B_Bill.FirstOrDefaultAsync(b => b.B_Id == bill.id);
+
 
             if (existingBill == null)
             {
-                return NotFound(); // Return 404 if the bill doesn't exist
+                return NotFound(); 
             }
 
-            // Update the properties of the existing bill
+            existingBill.B_Id = existingBill.B_Id;
+            existingBill.BillNo = existingBill.BillNo;
             existingBill.BuyerName = bill.BuyerName;
             existingBill.PaymentMethod = bill.PaymentMethod;
-            existingBill.CreatedAt = bill.CreatedAt;
+            existingBill.CreatedAt = DateTime.UtcNow;
             existingBill.IsPaid = bill.IsPaid;
 
-            // Initialize the total price for the existing bill to 0
+           
             existingBill.TotalBillPrice = 0;
 
-            // Create a set to track the updated item IDs
+           
             var updatedItemIds = new HashSet<int>();
 
-            // Loop through each item from the incoming bill
+      
             foreach (var item in bill.Items)
             {
-                // Fetch the material from the database
+               
                 var material = await _context.Materials.FindAsync(item.MaterialId);
 
                 if (material != null)
                 {
-                    // Check if the item already exists in the current bill
+                   
                     var existingItem = existingBill.Items.FirstOrDefault(i => i.MaterialId == item.MaterialId);
 
                     if (existingItem != null)
                     {
-                        // Update existing item properties
+                      
                         existingItem.Quantity = item.Quantity;
                         existingItem.Price = item.Price;
                         existingItem.Material = material;  
@@ -221,7 +224,7 @@ namespace MAPI.Controllers
                     }
                     else
                     {
-                        // Create a new item and add it to the bill's Items collection
+                        
                         var newItem = new B_BillItem
                         {
                             MaterialId = item.MaterialId,
@@ -230,11 +233,11 @@ namespace MAPI.Controllers
                         };
                         newItem.Material = material;
 
-                        // Add the new item to the bill's Items collection
-                        existingBill.Items.Add(newItem);  // Important step here
+                       
+                        existingBill.Items.Add(newItem);  
                         updatedItemIds.Add(newItem.Id);
 
-                        // Add the new item’s total price to the bill’s total price
+                        
                         existingBill.TotalBillPrice += newItem.TotalPrice;
                     }
                 }

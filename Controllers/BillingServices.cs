@@ -2,8 +2,6 @@
 using iTextSharp.text;
 using MAPI.Models;
 using Microsoft.AspNetCore.Mvc;
-using MAPI.Services;
-using static iText.Kernel.Pdf.Colorspace.PdfDeviceCs;
 
 namespace MAPI.Controllers
 {

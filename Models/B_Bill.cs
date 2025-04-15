@@ -78,7 +78,15 @@ namespace MAPI.Models
         public PaymentMethodType PaymentMethod { get; set; }
         public List<B_BillItemDto> Items { get; set; }
     }
-
+    
+   public class Edit_B_Bill_Dto
+    {
+        public int id { get; set; }
+        public string BuyerName { get; set; } = "";
+        public bool IsPaid { get; set; }
+        public PaymentMethodType PaymentMethod { get; set; }
+        public List<B_BillItemDto> Items { get; set; }
+    }
     public class B_BillItemDto
     {
         public int MaterialId { get; set; }
