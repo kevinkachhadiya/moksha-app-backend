@@ -33,6 +33,8 @@ namespace MAPI.Models
 
         public bool IsPaid { get; set; }
 
+        public Boolean IsActive { get; set; }
+
         public B_Bill()
         {
             CreatedAt = DateTime.UtcNow;
@@ -57,7 +59,7 @@ namespace MAPI.Models
         public int MaterialId { get; set; }
 
         [Required]
-        public int Quantity { get; set; }
+        public decimal Quantity { get; set; }
 
         [Required]
         [Column(TypeName = "decimal(18,2)")]
@@ -69,11 +71,13 @@ namespace MAPI.Models
         public decimal TotalPrice => Price * Quantity;
 
         public string? ColorName => Material?.ColorName; // Nullable return type
+       
+
     }
 
     public class Create_B_Bill_Dto
     {
-        public string BuyerName { get; set; }
+        public string BuyerName { get; set; } = "";
         public bool IsPaid { get; set; }
         public PaymentMethodType PaymentMethod { get; set; }
         public List<B_BillItemDto> Items { get; set; }
@@ -90,7 +94,20 @@ namespace MAPI.Models
     public class B_BillItemDto
     {
         public int MaterialId { get; set; }
-        public int Quantity { get; set; }
+        public decimal Quantity { get; set; }
         public decimal Price { get; set; }
     }
+
+    public class BillListViewModel
+    {
+        public IEnumerable<B_Bill>? Bills { get; set; }
+        public string SearchTerm { get; set; } = "";
+        public string SortColumn { get; set; } = "";
+        public string SortDirection { get; set; } = "";
+        public int CurrentPage { get; set; }
+        public int TotalPages { get; set; }
+        public int PageSize { get; set; }
+        public int TotalItems { get; set; }
+    }
+
 }

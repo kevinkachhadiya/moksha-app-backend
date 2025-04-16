@@ -1,6 +1,9 @@
 ﻿using MAPI.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
+using System.Globalization;
+using static iTextSharp.text.pdf.AcroFields;
 namespace MAPI.Controllers
 
 {
@@ -10,32 +13,109 @@ namespace MAPI.Controllers
     {
         private readonly AppDbContext _context;
         private readonly BillingServices _b;
-
         public BuyerBillingController(AppDbContext context, BillingServices b)
         {
             _context = context;
             _b = b;
         }
 
-        // GET: api/BuyerBilling
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<B_Bill>>> GetBills()
+        public async Task<ActionResult<IEnumerable<B_Bill>>> GetBills(
+               [FromQuery] string searchTerm="",
+               [FromQuery] string sortColumn = "CreatedAt",
+               [FromQuery] string sortDirection = "desc",
+               [FromQuery] int page = 1,
+               [FromQuery] int pageSize = 10)
         {
-            var bill = await _context.B_Bill
-                             .Include(b => b.Items)           // Include the items
-                             .ThenInclude(i => i.Material)   // Include the related material for each item
-                             .ToListAsync();
-            return bill;
+
+
+            IQueryable<B_Bill> query = _context.B_Bill.AsQueryable().Where(b=>b.IsActive==true);
+
+
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                // First try database-compatible filters
+                query = query.Where(b => b.BuyerName.Contains(searchTerm));
+
+                // Get preliminary results
+                var tempResults = await query.ToListAsync();
+
+                // Apply additional client-side filters only if needed
+                if (tempResults.Count < pageSize ||
+                    tempResults.All(b => b.BuyerName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)))
+                {
+                    // Get ALL active bills if preliminary filter was too restrictive
+                    tempResults = await _context.B_Bill
+                        .Where(b => b.IsActive == true)
+                        .ToListAsync();
+                }
+
+                // Apply comprehensive filtering
+                var filteredResults = tempResults
+                    .Where(b =>
+                        b.BuyerName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                        b.PaymentMethod.ToString().Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                        b.TotalBillPrice.ToString(CultureInfo.InvariantCulture).Contains(searchTerm) ||
+                        b.CreatedAt.ToString("yyyy-MM-dd").Contains(searchTerm))
+                    .ToList();
+                query = filteredResults.AsQueryable();
+            }
+
+            switch (sortColumn)
+            {
+                case "BuyerName":
+                    query = sortDirection == "asc"
+                        ? query.OrderBy(b => b.BuyerName)
+                        : query.OrderByDescending(b => b.BuyerName);
+                    break;
+                case "TotalBillPrice":
+                    query = sortDirection == "asc"
+                        ? query.OrderBy(b => b.TotalBillPrice)
+                        : query.OrderByDescending(b => b.TotalBillPrice);
+                    break;
+                case "PaymentMethod":
+                    query = sortDirection == "asc"
+                        ? query.OrderBy(b => b.PaymentMethod)
+                        : query.OrderByDescending(b => b.PaymentMethod);
+                    break;
+                default: // "CreatedAt"
+                    query = sortDirection == "asc"
+                        ? query.OrderBy(b => b.CreatedAt)
+                        : query.OrderByDescending(b => b.CreatedAt);
+                    break;
+            }
+
+            // Pagination
+            int totalItems = query.Count();
+            int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            var bills = query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            var Bills = new
+            {
+                Bills = bills,
+                SearchTerm = searchTerm,
+                SortColumn = sortColumn,
+                SortDirection = sortDirection,
+                CurrentPage = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                TotalPages = totalPages
+        };
+
+            return Ok(Bills);
         }
 
-        // GET: api/BuyerBilling/5
         [HttpGet("GetBillByid")]
         public async Task<IActionResult> GetBill(int billId)
         {
             var bill = await _context.B_Bill
                                      .Include(b => b.Items)
                                      .ThenInclude(i => i.Material) // Eagerly load Material
-                                     .FirstOrDefaultAsync(b => b.B_Id == billId);
+                                     .FirstOrDefaultAsync(b => b.B_Id == billId && b.IsActive == true);
 
             dynamic editBillDto;
 
@@ -68,8 +148,7 @@ namespace MAPI.Controllers
 
             return Ok(editBillDto);
         }
-        
-        // POST: api/BuyerBilling
+              
         [HttpPost]
         public async Task<IActionResult> CreateBill([FromBody] Create_B_Bill_Dto Dto_b_bill)
         {
@@ -77,11 +156,11 @@ namespace MAPI.Controllers
             {
                 BillNo = await GenerateBillNoAsync(),
                 BuyerName = Dto_b_bill.BuyerName,
-                // Don't set B_Id - let the database generate it
                 Items = new List<B_BillItem>(),
                 IsPaid = Dto_b_bill.IsPaid,
-                PaymentMethod = Dto_b_bill.PaymentMethod
-            };
+                PaymentMethod = Dto_b_bill.PaymentMethod,
+                IsActive = true
+    };
 
 
             if (Dto_b_bill == null)
@@ -98,9 +177,6 @@ namespace MAPI.Controllers
                 // Fetch the material from the database using MaterialId
                 var material = await _context.Materials.FindAsync(item.MaterialId);
                 var w_item = new B_BillItem() {};
-                
-
-
                 if (material != null)
                 {
                     w_item.MaterialId = material.Id;
@@ -143,8 +219,7 @@ namespace MAPI.Controllers
             // Return the newly created bill as a response
             return CreatedAtAction(nameof(GetBill), new { id = bill.B_Id }, bill);
         }
-
-        // Helper method to generate BillNo
+       
         private async Task<string> GenerateBillNoAsync()
         {
             // Get the most recent bill to generate the next BillNo
@@ -169,105 +244,74 @@ namespace MAPI.Controllers
         }
 
         [HttpPut("UpdateBill")]
-        public async Task<IActionResult> UpdateBill([FromBody] Edit_B_Bill_Dto bill)
+        public async Task<IActionResult> UpdateBill([FromBody] Edit_B_Bill_Dto Dto_b_bill)
         {
-            if (bill == null)
+            try
             {
-                return BadRequest("Bill data is invalid.");
+              var old_bill = _context.B_Bill.Include(b=>b.Items).FirstOrDefault(b=>b.B_Id == Dto_b_bill.id);
+             
+                if (old_bill != null)
+            {
+                    old_bill.BuyerName = Dto_b_bill.BuyerName;
+                    old_bill.Items.Clear();
+                    old_bill.Items = new List<B_BillItem>();
+                    old_bill.IsPaid = Dto_b_bill.IsPaid;
+                    old_bill.CreatedAt = DateTime.UtcNow;
+                    old_bill.PaymentMethod = Dto_b_bill.PaymentMethod;
             }
-
-            // Fetch the bill from the database along with the associated items and materials
-            var existingBill = await _context.B_Bill.FirstOrDefaultAsync(b => b.B_Id == bill.id);
-
-
-            if (existingBill == null)
+            else
             {
-                return NotFound(); 
+                return BadRequest("Bill data is null.");
             }
-
-            existingBill.B_Id = existingBill.B_Id;
-            existingBill.BillNo = existingBill.BillNo;
-            existingBill.BuyerName = bill.BuyerName;
-            existingBill.PaymentMethod = bill.PaymentMethod;
-            existingBill.CreatedAt = DateTime.UtcNow;
-            existingBill.IsPaid = bill.IsPaid;
-
-           
-            existingBill.TotalBillPrice = 0;
-
-           
-            var updatedItemIds = new HashSet<int>();
-
-      
-            foreach (var item in bill.Items)
+            old_bill.TotalBillPrice = 0;
+            foreach (var item in Dto_b_bill.Items)
             {
-               
                 var material = await _context.Materials.FindAsync(item.MaterialId);
-
+                var w_item = new B_BillItem() { };
                 if (material != null)
                 {
-                   
-                    var existingItem = existingBill.Items.FirstOrDefault(i => i.MaterialId == item.MaterialId);
+                    w_item.MaterialId = material.Id;
+                    w_item.Quantity = item.Quantity;
+                    w_item.Price = item.Price;
+                    w_item.Material = material;
 
-                    if (existingItem != null)
-                    {
-                      
-                        existingItem.Quantity = item.Quantity;
-                        existingItem.Price = item.Price;
-                        existingItem.Material = material;  
+                  
+                    old_bill.TotalBillPrice += w_item.TotalPrice;  // item.TotalPrice is Price * Quantity
 
-                        // Update the bill's total price
-                        existingBill.TotalBillPrice += existingItem.TotalPrice;
-
-                        // Mark this item as updated
-                        updatedItemIds.Add(existingItem.Id);
-                    }
-                    else
-                    {
-                        
-                        var newItem = new B_BillItem
-                        {
-                            MaterialId = item.MaterialId,
-                            Quantity = item.Quantity,
-                            Price = item.Price, 
-                        };
-                        newItem.Material = material;
-
-                       
-                        existingBill.Items.Add(newItem);  
-                        updatedItemIds.Add(newItem.Id);
-
-                        
-                        existingBill.TotalBillPrice += newItem.TotalPrice;
-                    }
+                     old_bill.Items.Add(w_item);
                 }
                 else
                 {
-                    // Return a bad request if the material is not found
                     return BadRequest($"Material with ID {item.MaterialId} not found.");
                 }
             }
 
-            // Remove items that are no longer part of the updated bill
-            var itemsToRemove = existingBill.Items.Where(i => !updatedItemIds.Contains(i.Id)).ToList();
-            foreach (var itemToRemove in itemsToRemove)
+            if (old_bill.IsPaid)
             {
-                existingBill.Items.Remove(itemToRemove);
+                await _context.SaveChangesAsync();
+                return Accepted();
+            }
+            else
+            {
+                return BadRequest("CheckBox is not marked");
             }
 
-            try
+            }
+            catch (DbUpdateConcurrencyException)
             {
-                
-                await _context.SaveChangesAsync();
+                return Conflict("The bill was modified by another user.");
+            }
+            catch (DbUpdateException ex)
+            {
+                return StatusCode(500, $"Database error: {ex.InnerException?.Message}");
             }
             catch (Exception ex)
             {
-                // Handle any exceptions and return an internal server error
+                // Log the error
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
 
-            // Return a NoContent response indicating the update was successful
-            return NoContent();
+
         }
 
         [HttpGet("print_buying_bile")]
@@ -276,7 +320,7 @@ namespace MAPI.Controllers
             var bill = await _context.B_Bill
                                      .Include(b => b.Items)
                                      .ThenInclude(i => i.Material) // Eagerly load Material
-                                     .FirstOrDefaultAsync(b => b.B_Id == billId);
+                                     .FirstOrDefaultAsync(b => b.B_Id == billId && b.IsActive == true);
 
             if (bill == null)
             {
@@ -298,37 +342,38 @@ namespace MAPI.Controllers
             return File(fileBytes, "application/pdf", fileName); // Return the file with a content type of PDF
         }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteBill(int id)
+        [HttpDelete("Deletebill")]
+        public async Task<IActionResult> DeleteBill(int billId)
         {
-            // Find the bill including related items
-            var bill = await _context.B_Bill
-                                     .Include(b => b.Items)
-                                     .FirstOrDefaultAsync(b => b.B_Id == id);
-
-            if (bill == null)
-            {
-                return NotFound(); // Return 404 if the bill doesn't exist
-            }
-
-            // Remove all related items from B_BillItem table
-            _context.B_BillItem.RemoveRange(bill.Items);
-
-            // Remove the bill itself
-            _context.B_Bill.Remove(bill);
-
             try
             {
-                // Save the changes to the database
-                await _context.SaveChangesAsync();
+
+                var bill = await _context.B_Bill
+                                     .Include(b => b.Items)
+                                     .FirstOrDefaultAsync(b => b.B_Id == billId);
+                if (bill != null)
+                {
+
+                    bill.IsActive = false;
+                    await _context.SaveChangesAsync();
+                    return NoContent();
+                }
+                else
+                {
+                    return BadRequest($"can't find bill");
+                
+                }
+               
+
             }
             catch (Exception ex)
             {
                 return StatusCode(500, $"Internal server error: {ex.Message}"); // Return a 500 status if there's an error
             }
 
-            return NoContent(); // Return 204 No Content after successful deletion
+          
         }
+    
     }
 }
 
