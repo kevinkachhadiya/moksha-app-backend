@@ -114,7 +114,7 @@ namespace MAPI.Controllers
         {
             var bill = await _context.B_Bill
                                      .Include(b => b.Items)
-                                     .ThenInclude(i => i.Material) // Eagerly load Material
+                                     .ThenInclude(i => i.Material)
                                      .FirstOrDefaultAsync(b => b.B_Id == billId && b.IsActive == true);
 
             dynamic editBillDto;
@@ -339,7 +339,17 @@ namespace MAPI.Controllers
 
             // Return the PDF as a file download
             var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath); // Read the file into a byte array
-            return File(fileBytes, "application/pdf", fileName); // Return the file with a content type of PDF
+            try
+            {
+                return File(fileBytes, "application/pdf", "Invoice.pdf"); // Return for download
+            }
+            finally
+            {
+                if (System.IO.File.Exists(filePath))
+                {
+                    System.IO.File.Delete(filePath);
+                }
+            }
         }
 
         [HttpDelete("Deletebill")]

@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using MAPI.Models;
 using Microsoft.AspNetCore.Authorization;
+using System.Globalization;
 
 namespace MAPI.Controllers
 {
@@ -19,18 +20,85 @@ namespace MAPI.Controllers
 
         // GET: api/Materials
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Material>>> GetMaterials()
+        public async Task<ActionResult<IEnumerable<Material>>> GetMaterials([FromQuery] string searchTerm = "",
+               [FromQuery] string sortColumn = "ColorName",
+               [FromQuery] string sortDirection = "asc",
+               [FromQuery] int page = 1,
+               [FromQuery] int pageSize = 10)
         {
-            try
+            
+                IQueryable<Material> query = _context.Materials.AsQueryable().Where(b => b.IsActive == true);
+
+            if (!string.IsNullOrEmpty(searchTerm))
             {
-                var materials = await _context.Materials.ToListAsync();
-                return Ok(materials);
+
+                query = query.Where(b => b.ColorName.Contains(searchTerm));
+
+
+                var tempResults = await query.ToListAsync();
+
+                // Apply additional client-side filters only if needed
+                if (tempResults.Count < pageSize ||
+                    tempResults.All(b => b.ColorName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)))
+                {
+                    // Get ALL active bills if preliminary filter was too restrictive
+                    tempResults = await _context.Materials
+                        .Where(b => b.IsActive == true)
+                        .ToListAsync();
+                }
+
+                // Apply comprehensive filtering
+                var filteredResults = tempResults
+                    .Where(b =>
+                        b.ColorName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                        b.BasePrice.ToString().Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+                    ).ToList();
+
+
+                query = filteredResults.AsQueryable();
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error in GetMaterials: {ex}");
-                return StatusCode(500, $"Internal Server Error: {ex.Message}");
-            }
+
+                    switch (sortColumn)
+                    {
+                        case "BuyerName":
+                            query = sortDirection == "asc"
+                                ? query.OrderBy(b => b.ColorName)
+                                : query.OrderByDescending(b => b.ColorName);
+                            break;
+                        case "BasePrice":
+                            query = sortDirection == "asc"
+                                ? query.OrderBy(b => b.BasePrice)
+                                : query.OrderByDescending(b => b.BasePrice);
+                            break;
+                        default: // "baseprice"
+                            query = sortDirection == "asc"
+                                ? query.OrderBy(b => b.ColorName)
+                                : query.OrderByDescending(b => b.ColorName);
+                            break;
+                    }
+
+                    // Pagination
+                    int totalItems = query.Count();
+                    int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+                    var Materials = query
+                        .Skip((page - 1) * pageSize)
+                        .Take(pageSize)
+                        .ToList();
+
+                   var materials = new
+                    {
+                        Materials = Materials,
+                        SearchTerm = searchTerm,
+                        SortColumn = sortColumn,
+                        SortDirection = sortDirection,
+                        CurrentPage = page,
+                        PageSize = pageSize,
+                        TotalItems = totalItems,
+                        TotalPages = totalPages
+                    };
+
+                    return Ok(materials);
         }
 
         // GET: api/Materials/5
@@ -51,6 +119,16 @@ namespace MAPI.Controllers
         [HttpPost("CreateMaterial")]
         public async Task<ActionResult<Material>> CreateMaterial([FromBody] Material material)
         {
+            material.IsActive = true;
+            var Exit = _context.Materials.FirstOrDefault(m=>m.ColorName == material.ColorName);
+
+            if (Exit!=null)
+            {
+                Exit.BasePrice = material.BasePrice;
+                Exit.IsActive = true;
+                await _context.SaveChangesAsync();
+                return CreatedAtAction("GetMaterial", new { id = material.Id }, material);
+            }
             _context.Materials.Add(material);
             await _context.SaveChangesAsync();
 
@@ -97,8 +175,8 @@ namespace MAPI.Controllers
             {
                 return NotFound();
             }
+            material.IsActive = false;
 
-            _context.Materials.Remove(material);
             await _context.SaveChangesAsync();
 
             return NoContent();

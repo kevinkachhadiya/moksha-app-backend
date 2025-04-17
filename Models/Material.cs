@@ -18,7 +18,20 @@ namespace MAPI.Models
         [Required]
         [Column(TypeName = "decimal(18,2)")]
         public decimal BasePrice { get; set; }
-    
-    
+        
+        [Required]
+        public bool IsActive { get; set; }
+    }
+
+    public class MaterialsListViewModel
+    {
+        public IEnumerable<Material> Materials { get; set; }
+        public string SearchTerm { get; set; }
+        public string SortColumn { get; set; }
+        public string SortDirection { get; set; }
+        public int CurrentPage { get; set; }
+        public int TotalPages { get; set; }
+        public int PageSize { get; set; }
+        public int TotalItems { get; set; }
     }
 }
