@@ -2,6 +2,9 @@
 using MAPI.Services;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
+using System.Globalization;
 
 namespace MAPI.Controllers
 {
@@ -17,27 +20,85 @@ namespace MAPI.Controllers
             _context = context;
             _stockService = stockService;
         }
-        [HttpGet]
-        public async Task<IActionResult> GetAllStocks()
-        {
-            try
-            {
-                var stocks = await _stockService.GetAllStocksAsync();
-                if (stocks == null || stocks.Count == 0)
-                {
-                    return NotFound("No stocks found.");
-                }
 
-                return Ok(stocks);
-            }
-            catch (Exception ex)
+
+        [HttpGet("GetAllStocks")]
+        public async Task<IActionResult> GetAllStocks(
+    [FromQuery] string searchTerm = "",
+    [FromQuery] string sortColumn = "ColorName",
+    [FromQuery] string sortDirection = "asc",
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 12)
+        {
+            IQueryable<Stock> query = _context.Stocks
+                .Include(s => s.Material)
+                .Where(s => s.isActive);
+
+            // Server-side filtering
+            if (!string.IsNullOrEmpty(searchTerm))
             {
-                // Handle unexpected errors
-                return StatusCode(500, $"Internal server error: {ex.Message}");
+                query = query.Where(s =>
+                    s.Material.ColorName.Contains(searchTerm) ||
+                    s.TotalBags.ToString().Contains(searchTerm) ||
+                    s.AvailableStock.ToString().Contains(searchTerm) ||
+                    (s.TotalBags * s.Weight).ToString().Contains(searchTerm)
+                );
             }
+
+            // Sorting
+            switch (sortColumn)
+            {
+                case "ColorName":
+                    query = sortDirection == "asc" ? query.OrderBy(s => s.Material.ColorName) : query.OrderByDescending(s => s.Material.ColorName);
+                    break;
+                case "TotalBags":
+                    query = sortDirection == "asc" ? query.OrderBy(s => s.TotalBags) : query.OrderByDescending(s => s.TotalBags);
+                    break;
+                case "AvailableStock":
+                    query = sortDirection == "asc" ? query.OrderBy(s => s.AvailableStock) : query.OrderByDescending(s => s.AvailableStock);
+                    break;
+                default:
+                    query = sortDirection == "asc" ? query.OrderBy(s => s.StockId) : query.OrderByDescending(s => s.StockId);
+                    break;
+            }
+
+            // Pagination
+            int totalItems = await query.CountAsync();
+            int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            var pagedStocks = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(s => new Stock_
+                {
+                    StockId = s.StockId,
+                    MaterialId = s.MaterialId,
+                    ColorName = s.Material.ColorName,
+                    TotalBags = s.TotalBags,
+                    Weight = s.Weight,
+                    AvailableStock = s.AvailableStock,
+                    isActive = s.isActive
+                })
+                .ToListAsync();
+
+            var viewModel = new stockListViewModel
+            {
+                Stock = pagedStocks,
+                SearchTerm = searchTerm,
+                SortColumn = sortColumn,
+                SortDirection = sortDirection,
+                CurrentPage = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                TotalPages = totalPages
+            };
+
+            return Ok(viewModel);
         }
-        // Retrieve stock by ID
+
+
         [HttpGet("{stockId}")]
+
         public async Task<IActionResult> GetStockById(int stockId)
         {
             try
@@ -52,7 +113,7 @@ namespace MAPI.Controllers
         }
         // Create stock entry
 
-        [HttpPost]
+        [HttpPost("CreateStock")]
         public async Task<IActionResult> CreateStock([FromBody] Stock createStockDto)
         {
             if (createStockDto == null)
@@ -60,8 +121,16 @@ namespace MAPI.Controllers
                 return BadRequest("Invalid data.");
             }
 
-            var stock = await _stockService.CreateStockAsync(createStockDto.MaterialId, createStockDto.TotalBags, createStockDto.Weight);
-            return CreatedAtAction(nameof(GetStockById), new { stockId = stock.StockId }, stock);
+            try
+            {
+                var stock = await _stockService.CreateStockAsync(createStockDto.MaterialId, createStockDto.TotalBags, createStockDto.Weight);
+                return CreatedAtAction(nameof(GetStockById), new { stockId = stock.StockId }, stock);
+            }
+            catch (ArgumentException e)
+            {
+
+                return BadRequest(e.Message);
+            }
         }
         // Update stock details
         [HttpPut("{stockId}")]

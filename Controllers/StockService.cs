@@ -19,25 +19,46 @@ namespace MAPI.Services
         // Create a new stock entry
         public async Task<Stock> CreateStockAsync(int materialId, int totalBags, decimal weightPerBag)
         {
-            if (weightPerBag <= 0 || totalBags < 1)
+            var materialExists = await _context.Materials.AnyAsync(m => m.Id == materialId);
+            var AlreadyDeletedStock = await _context.Stocks.Where(s=>s.isActive==false).FirstOrDefaultAsync(s=>s.MaterialId == materialId);
+            var already_available  = await _context.Stocks.Where(s => s.isActive == true).FirstOrDefaultAsync(s => s.MaterialId == materialId);
+            if (!materialExists)
+            {
+                throw new ArgumentException("Material does not exist.");
+            }
+            if (weightPerBag <= 0 || totalBags <= 0)
             {
                 throw new ArgumentException("Invalid values for weight or bags.");
             }
-
-            // Create a new Stock instance
-            var stock = new Stock
+            if (AlreadyDeletedStock != null)
             {
-                MaterialId = materialId,
-                TotalBags = totalBags,
-                Weight = weightPerBag,
-            };
-            stock.AddStock(totalBags, weightPerBag);
+                AlreadyDeletedStock.isActive = true;
+                AlreadyDeletedStock.TotalBags = totalBags;
+                AlreadyDeletedStock.Weight = weightPerBag;
+                AlreadyDeletedStock.AvailableStock = AlreadyDeletedStock.TotalWeight;
+                await _context.SaveChangesAsync();
+                return AlreadyDeletedStock;
+            }
+            else if (already_available!=null)
+            {
+                throw new ArgumentException("can not create duplicated material");
+            }
+            else {
+                var stock = new Stock
+                {
+                    MaterialId = materialId,
+                    TotalBags = totalBags,
+                    Weight = weightPerBag,
+                    isActive = true,
+                    AvailableStock = totalBags*Weight
+                };
 
-            // Add to DB context and save
-            _context.Stocks.Add(stock);
-            await _context.SaveChangesAsync();
+                // Add to DB context and save
+                _context.Stocks.Add(stock);
+                await _context.SaveChangesAsync();
 
-            return stock;
+                return stock;
+            }
         }
 
         // Retrieve stock by its ID

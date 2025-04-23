@@ -2,6 +2,9 @@
 
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System.Text.Json.Serialization;
+using MAPI.Models;
 
 namespace MAPI.Models
 {
@@ -28,7 +31,8 @@ namespace MAPI.Models
         public decimal AvailableStock { get; set; }
 
 
-        // Change to non-nullable if relationship is required
+        [JsonIgnore]
+        [ValidateNever]
         public Material Material { get; set; } = null!;  // Remove '?' and initialize
         
 
@@ -55,5 +59,29 @@ namespace MAPI.Models
             TotalBags += bagsAdded;  // Changed to += instead of =
             AvailableStock += bagsAdded * weightPerBag;
         }
+        public bool isActive { get; set; }
     }
 }
+public class Stock_
+{
+    public int StockId { get; set; }
+    public int MaterialId { get; set; }
+    public string ColorName { get; set; }
+    public int TotalBags { get; set; }
+    public decimal Weight { get; set; }
+    public decimal TotalWeight => TotalBags * Weight;
+    public decimal AvailableStock { get; set; }
+    public bool isActive { get; set; }
+}
+public class stockListViewModel
+{
+    public IEnumerable<Stock_> Stock { get; set; }
+    public string SearchTerm { get; set; }
+    public string SortColumn { get; set; }
+    public string SortDirection { get; set; }
+    public int CurrentPage { get; set; }
+    public int TotalPages { get; set; }
+    public int PageSize { get; set; }
+    public int TotalItems { get; set; }
+}
+
