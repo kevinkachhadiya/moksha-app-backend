@@ -50,7 +50,7 @@ namespace MAPI.Services
                     TotalBags = totalBags,
                     Weight = weightPerBag,
                     isActive = true,
-                    AvailableStock = totalBags*Weight
+                    AvailableStock = totalBags* weightPerBag
                 };
 
                 // Add to DB context and save
@@ -77,9 +77,9 @@ namespace MAPI.Services
         }
 
         // Update the stock's details
-        public async Task<Stock> UpdateStockAsync(int stockId, int bagsAdded, decimal weightPerBag)
+        public async Task<Stock> UpdateStockAsync(Stock updateStockDto)
         {
-            var stock = await _context.Stocks.FindAsync(stockId);
+            var stock = await _context.Stocks.FindAsync(updateStockDto.StockId);
 
             if (stock == null)
             {
@@ -87,16 +87,16 @@ namespace MAPI.Services
             }
 
             // Validate the inputs
-            if (bagsAdded <= 0 || weightPerBag <= 0)
+            if (updateStockDto.TotalBags <= 0 || updateStockDto.Weight < 0 || updateStockDto.ExtraWeight<0)
             {
                 throw new ArgumentException("Invalid values for bags or weight.");
             }
 
             // Update the stock details
-            stock.TotalBags = bagsAdded;
-            stock.Weight = weightPerBag;
-
-            stock.AvailableStock =
+            stock.TotalBags = updateStockDto.TotalBags;
+            stock.Weight = updateStockDto.Weight;
+            stock.ExtraWeight = updateStockDto.ExtraWeight;
+            stock.AvailableStock = stock.TotalWeight + stock.ExtraWeight;
             // Save changes
             await _context.SaveChangesAsync();
 
@@ -126,20 +126,31 @@ namespace MAPI.Services
         }
         public async Task<Stock> Add_Stocks_per_item(int stockId, Stock updateStockDto)
         {
-            // Find the stock by ID
             var stock = await _context.Stocks.FindAsync(stockId);
             if (stock == null)
             {
-                throw new KeyNotFoundException("Stock not found.");
+                throw new ArgumentException("Stock not found.");
             }
 
-            // Update the stock with new values
-            stock.TotalBags = updateStockDto.TotalBags;
-            stock.Weight = updateStockDto.Weight;
+            var total_extra_stock = updateStockDto.TotalWeight + updateStockDto.ExtraWeight;
 
-            // Update the AvailableStock based on the new values
-            stock.AddStock(stock.TotalBags, stock.Weight);
+            if (updateStockDto.TotalBags < 0 && updateStockDto.TotalWeight < 0 && updateStockDto.Weight < 0)
+            {
+                throw new ArgumentException("must be more than 0");
+            }
 
+            if (total_extra_stock < 0)
+            {
+                throw new ArgumentException("total stock  must be more than 0");
+            }
+            else
+            {
+                stock.TotalBags += updateStockDto.TotalBags;
+                stock.AvailableStock += total_extra_stock;
+                stock.ExtraWeight += updateStockDto.ExtraWeight;
+                stock.Weight = (stock.AvailableStock - stock.ExtraWeight) / stock.TotalBags;
+            }
+            //
             // Save changes to the database
             await _context.SaveChangesAsync();
 
@@ -158,9 +169,7 @@ namespace MAPI.Services
             stock.TotalBags = updateStockDto.TotalBags;
             stock.Weight = updateStockDto.Weight;
 
-            // Update the AvailableStock based on the new values
-            stock.RemoveStock(stock.TotalWeight);
-
+          
             // Save changes to the database
             await _context.SaveChangesAsync();
 

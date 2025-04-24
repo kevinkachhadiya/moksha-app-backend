@@ -133,12 +133,12 @@ namespace MAPI.Controllers
             }
         }
         // Update stock details
-        [HttpPut("{stockId}")]
+        [HttpPut("UpdateStock/{stockId}")]
         public async Task<IActionResult> UpdateStock(int stockId, [FromBody] Stock updateStockDto)
         {
             try
             {
-                var updatedStock = await _stockService.UpdateStockAsync(stockId, updateStockDto.TotalBags, updateStockDto.Weight);
+                var updatedStock = await _stockService.UpdateStockAsync(updateStockDto);
                 return Ok(updatedStock);
             }
             catch (KeyNotFoundException)
@@ -148,7 +148,7 @@ namespace MAPI.Controllers
         }
 
 
-        [HttpPut("{stockId}/add_stock")]
+        [HttpPut("add_stock/{stockId}")]
         public async Task<IActionResult> Add_Stocks(int stockId, [FromBody] Stock addedStockDto)
         {
             if (addedStockDto == null)
@@ -175,34 +175,7 @@ namespace MAPI.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
-        [HttpPut("{stockId}/remove_stock")]
-        public async Task<IActionResult> remove_stock(int stockId, [FromBody] Stock removeStockDto)
-        {
-            if (removeStockDto == null)
-            {
-                return BadRequest("Invalid data.");
-            }
-
-            try
-            {
-                // Call the service to remove the stock item
-                var removedStock = await _stockService.remove_Stocks_per_item(stockId, removeStockDto);
-
-                // Return the updated stock
-                return Ok(removedStock);
-            }
-            catch (KeyNotFoundException)
-            {
-                // Stock not found
-                return NotFound("Stock not found.");
-            }
-            catch (Exception ex)
-            {
-                // Handle any other exceptions
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
-        }
-
+  
         // Delete stock entry
         [HttpDelete("{stockId}")]
         public async Task<IActionResult> DeleteStock(int stockId)

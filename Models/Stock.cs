@@ -30,35 +30,13 @@ namespace MAPI.Models
         [Column(TypeName = "decimal(18,2)")]  // Add this to AvailableStock
         public decimal AvailableStock { get; set; }
 
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal ExtraWeight { get; set; }
 
         [JsonIgnore]
         [ValidateNever]
         public Material Material { get; set; } = null!;  // Remove '?' and initialize
-        
-
-        public void RemoveStock(decimal quantitySold)
-        {
-            if (quantitySold <= AvailableStock)
-            {
-                AvailableStock -= quantitySold;
-            }
-            else
-            {
-                throw new InvalidOperationException("Not enough stock available.");
-            }
-        }
-
-        public void AddStock(int bagsAdded, decimal weightPerBag)
-        {
-            if (weightPerBag <= 0)
-            {
-                throw new ArgumentException("Weight per bag must be greater than zero.");
-            }
-
-            Weight = weightPerBag;
-            TotalBags += bagsAdded;  // Changed to += instead of =
-            AvailableStock += bagsAdded * weightPerBag;
-        }
+     
         public bool isActive { get; set; }
     }
 }
@@ -72,6 +50,7 @@ public class Stock_
     public decimal TotalWeight => TotalBags * Weight;
     public decimal AvailableStock { get; set; }
     public bool isActive { get; set; }
+  
 }
 public class stockListViewModel
 {
