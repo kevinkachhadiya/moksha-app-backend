@@ -112,9 +112,7 @@ namespace MAPI.Services
             {
                 throw new KeyNotFoundException("Stock not found.");
             }
-
-            // Remove the stock record from the database
-            _context.Stocks.Remove(stock);
+            stock.isActive = false;
             await _context.SaveChangesAsync();
         }
         // Get all stocks

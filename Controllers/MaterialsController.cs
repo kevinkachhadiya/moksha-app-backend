@@ -171,10 +171,12 @@ namespace MAPI.Controllers
         public async Task<IActionResult> DeleteMaterial(int id)
         {
             var material = await _context.Materials.FindAsync(id);
+         
             if (material == null)
             {
                 return NotFound();
             }
+           
             material.IsActive = false;
 
             await _context.SaveChangesAsync();

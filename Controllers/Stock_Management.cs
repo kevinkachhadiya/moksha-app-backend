@@ -177,7 +177,7 @@ namespace MAPI.Controllers
         }
   
         // Delete stock entry
-        [HttpDelete("{stockId}")]
+        [HttpDelete("DeleteStock/{stockId}")]
         public async Task<IActionResult> DeleteStock(int stockId)
         {
             try
