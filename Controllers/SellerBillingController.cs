@@ -70,19 +70,7 @@ namespace MAPI.Controllers
             return Ok(modifiedBill);
         }
 
-        // DELETE: api/Bill/{id}
-        [HttpDelete("DeleteBill/{id}")]
-        public async Task<IActionResult> DeleteBill(int id)
-        {
-            var existingBill = await _Service_context.GetBillByIdAsync(id);
-            if (existingBill == null)
-            {
-                return NotFound("Bill not found.");
-            }
-
-            await _Service_context.S_DeleteBillAsync(id);
-            return NoContent(); // HTTP 204: No Content
-        }
+      
 
         [HttpPost("Selling_bill_without_gst/{id}")]
         public async Task<IActionResult> Selling_bill_without_gst(int id)

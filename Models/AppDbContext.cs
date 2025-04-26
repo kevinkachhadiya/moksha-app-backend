@@ -18,6 +18,9 @@ namespace MAPI.Models
 
         public DbSet<User> user { get; set; }
 
+        public DbSet<Party> Party { get; set; }
+
+
         // ✅ Ensure correct property name, type, and namespace
         // Implementing IDataProtectionKeyContext
         public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
