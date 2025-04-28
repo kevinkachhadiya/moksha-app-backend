@@ -124,9 +124,12 @@ namespace MAPI.Controllers
                   editBillDto = new Create_B_Bill_Dto
                 {
                     BuyerName = bill.BuyerName,
+                    P_number =  bill.P_number,
                     IsPaid = bill.IsPaid,
                     PaymentMethod = bill.PaymentMethod,
-                    Items = new List<B_BillItemDto>()
+                    Items = new List<B_BillItemDto>(),
+                   
+
                 };
             }
             else
@@ -152,10 +155,19 @@ namespace MAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateBill([FromBody] Create_B_Bill_Dto Dto_b_bill)
         {
+            var supplier = await _context.Party.FirstOrDefaultAsync(p=>p.P_number == Dto_b_bill.P_number && p.P_Name == Dto_b_bill.BuyerName);
+
+            if (supplier == null)
+            {
+                return BadRequest("Supplier not found, check name.");
+
+            }
+
             var bill = new B_Bill()
             {
                 BillNo = await GenerateBillNoAsync(),
                 BuyerName = Dto_b_bill.BuyerName,
+                P_number  = Dto_b_bill.P_number,
                 Items = new List<B_BillItem>(),
                 IsPaid = Dto_b_bill.IsPaid,
                 PaymentMethod = Dto_b_bill.PaymentMethod,
@@ -249,16 +261,29 @@ namespace MAPI.Controllers
             try
             {
               var old_bill = _context.B_Bill.Include(b=>b.Items).FirstOrDefault(b=>b.B_Id == Dto_b_bill.id);
-             
+
+                var supplier = _context.Party.FirstOrDefault(p=>p.P_number == Dto_b_bill.P_number && p.P_Name == p.P_Name);
+
                 if (old_bill != null)
-            {
-                    old_bill.BuyerName = Dto_b_bill.BuyerName;
-                    old_bill.Items.Clear();
-                    old_bill.Items = new List<B_BillItem>();
-                    old_bill.IsPaid = Dto_b_bill.IsPaid;
-                    old_bill.CreatedAt = DateTime.UtcNow;
-                    old_bill.PaymentMethod = Dto_b_bill.PaymentMethod;
-            }
+                {
+
+                    if (supplier != null)
+                    {
+                        old_bill.BuyerName = Dto_b_bill.BuyerName;
+                        old_bill.P_number = Dto_b_bill.P_number;
+                        old_bill.Items.Clear();
+                        old_bill.Items = new List<B_BillItem>();
+                        old_bill.IsPaid = Dto_b_bill.IsPaid;
+                        old_bill.CreatedAt = DateTime.UtcNow;
+                        old_bill.PaymentMethod = Dto_b_bill.PaymentMethod;
+                    }
+                    else
+                    {
+
+                        return BadRequest("Name and Number is not same as supplier section");
+                     }
+
+                }
             else
             {
                 return BadRequest("Bill data is null.");

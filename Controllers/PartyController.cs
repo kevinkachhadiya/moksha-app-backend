@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Diagnostics;
+using static MAPI.Models.Party;
 
 namespace MAPI.Controllers
 {
@@ -33,18 +35,14 @@ namespace MAPI.Controllers
                 errors.Add("Party name is required");
             else if (p.P_Name.Length < 3)
                 errors.Add("Party name must be at least 3 characters");
-
             if (string.IsNullOrWhiteSpace(p.P_number))
                 errors.Add("Phone number is required");
             else if (p.P_number.Length != 10 || !p.P_number.All(char.IsDigit))
                 errors.Add("Phone number must be exactly 10 digits");
-
             if (!Enum.IsDefined(typeof(Party.P_t), p.p_t))
                 errors.Add("Invalid party type selected");
-
             if (!p.IsActive)
                 errors.Add("Party must be active");
-
             if (errors.Any())
             {
                 return BadRequest(new
@@ -54,8 +52,6 @@ namespace MAPI.Controllers
                     errors
                 });
             }
-
-
             try
             {
                 await _context.Party.AddAsync(p); // Proper async method  
@@ -72,5 +68,38 @@ namespace MAPI.Controllers
                 });
             }
         }
+
+        [HttpGet("SupplierSearch")]
+        public async Task<IActionResult> SupplierSearch([FromQuery]string search)
+        {
+            if (string.IsNullOrWhiteSpace(search))
+            {
+                return BadRequest("Only White Space are not allowed");
+            }
+
+            // Filter based on the search term (case-insensitive)
+            var filteredSuppliers = _context.Party
+               .Where(s => s.P_Name.ToLower().Contains(search.ToLower()) && s.p_t == P_t.Supplier && s.IsActive == true)
+                .Take(10) // Limit results to prevent overwhelming the UI
+                .Select(s => new
+                {
+                    P_Name = s.P_Name,
+                    P_number = s.P_number
+                })
+                .ToList();
+
+            if (filteredSuppliers.Count() >= 1)
+           {
+                return Ok(filteredSuppliers);
+
+            }
+            else
+            {
+                return BadRequest("Zero record found");
+
+            }
+
+        }
+    
     }
 }

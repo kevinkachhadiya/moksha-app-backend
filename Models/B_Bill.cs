@@ -47,6 +47,7 @@ namespace MAPI.Models
             CreditCard,
             BankTransfer
         }
+        public string P_number { get; set; } = string.Empty;
     }
 
     public class B_BillItem
@@ -81,12 +82,15 @@ namespace MAPI.Models
         public bool IsPaid { get; set; }
         public PaymentMethodType PaymentMethod { get; set; }
         public List<B_BillItemDto> Items { get; set; }
+        public string P_number { get; set; } = string.Empty;
     }
     
    public class Edit_B_Bill_Dto
     {
         public int id { get; set; }
         public string BuyerName { get; set; } = "";
+        public string P_number { get; set; } = string.Empty;
+
         public bool IsPaid { get; set; }
         public PaymentMethodType PaymentMethod { get; set; }
         public List<B_BillItemDto> Items { get; set; }

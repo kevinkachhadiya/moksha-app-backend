@@ -17,9 +17,7 @@ namespace MAPI.Models
             public string P_number { get; set; } = string.Empty;
 
             public bool IsActive { get; set; } = true;
-
             public P_t p_t { get; set; }
-
             public enum P_t
             {
             
