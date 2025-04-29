@@ -262,13 +262,18 @@ namespace MAPI.Controllers
             {
               var old_bill = _context.B_Bill.Include(b=>b.Items).FirstOrDefault(b=>b.B_Id == Dto_b_bill.id);
 
-                var supplier = _context.Party.FirstOrDefault(p=>p.P_number == Dto_b_bill.P_number && p.P_Name == p.P_Name);
+                var supplier = await _context.Party.FirstOrDefaultAsync(p => p.P_number == Dto_b_bill.P_number && p.P_Name == Dto_b_bill.BuyerName);
+
+                if (supplier == null)
+                {
+                    return BadRequest("Supplier not found, check name.");
+
+                }
 
                 if (old_bill != null)
                 {
 
-                    if (supplier != null)
-                    {
+                   
                         old_bill.BuyerName = Dto_b_bill.BuyerName;
                         old_bill.P_number = Dto_b_bill.P_number;
                         old_bill.Items.Clear();
@@ -276,14 +281,8 @@ namespace MAPI.Controllers
                         old_bill.IsPaid = Dto_b_bill.IsPaid;
                         old_bill.CreatedAt = DateTime.UtcNow;
                         old_bill.PaymentMethod = Dto_b_bill.PaymentMethod;
-                    }
-                    else
-                    {
-
-                        return BadRequest("Name and Number is not same as supplier section");
-                     }
-
                 }
+                   
             else
             {
                 return BadRequest("Bill data is null.");

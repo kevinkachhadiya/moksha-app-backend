@@ -27,7 +27,7 @@ namespace MAPI.Controllers
                [FromQuery] int pageSize = 10)
         {
             
-                IQueryable<Material> query = _context.Materials.AsQueryable().Where(b => b.IsActive == true);
+            IQueryable<Material> query = _context.Materials.AsQueryable().Where(b => b.IsActive == true);
 
             if (!string.IsNullOrEmpty(searchTerm))
             {

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Diagnostics;
+using System.Globalization;
 using static MAPI.Models.Party;
 
 namespace MAPI.Controllers
@@ -99,6 +100,97 @@ namespace MAPI.Controllers
 
             }
 
+        }
+
+        [HttpGet("AllParty")]
+
+        public async Task<IActionResult> AllParty(
+               [FromQuery] string party = "All",
+               [FromQuery] string searchTerm = "",
+               [FromQuery] string sortColumn = "P_Name",
+               [FromQuery] string sortDirection = "asc",
+               [FromQuery] int page = 1,
+               [FromQuery] int pageSize = 10)
+        {
+
+            IQueryable<Party> query;
+            
+
+            if (party != "All")
+            {
+
+                var result = _context.Party
+                  .Where(p => p.IsActive)
+                  .AsEnumerable() // Forces in-memory evaluation
+                  .Where(p => p.p_t.ToString() == party)
+                  .ToList();
+
+                query = result.AsQueryable();
+            }
+            else
+            {
+                query = _context.Party.AsQueryable().Where(b => b.IsActive == true);
+            }
+
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+
+                  query = query
+                         .Where(b =>
+                              b.P_Name.ToLower().Contains(searchTerm.ToLower()) ||
+                              b.P_number.ToString().ToLower().Contains(searchTerm.ToLower()) ||
+                              b.P_Address.ToLower().ToString().Contains(searchTerm.ToLower()));
+                              }
+
+          
+
+            switch (sortColumn)
+            {
+                case "P_Name":
+                    query = sortDirection == "asc"
+                        ? query.OrderBy(b => b.P_Name)
+                        : query.OrderByDescending(b => b.P_Name);
+                    break;
+                case "P_number":
+                    query = sortDirection == "asc"
+                        ? query.OrderBy(b => b.P_number)
+                        : query.OrderByDescending(b => b.P_number);
+                    break; 
+                case "P_Address":
+                    query = sortDirection == "asc"
+                        ? query.OrderBy(b => b.P_Address)
+                        : query.OrderByDescending(b => b.P_Address);
+                    break;
+
+                default: 
+                    query = sortDirection == "asc"
+                        ? query.OrderBy(b => b.P_Name)
+                        : query.OrderByDescending(b => b.P_Name);
+                    break;
+            }
+
+            // Pagination
+             int totalItems = query.Count();
+            int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            var Parties_ = query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            var parties = new
+            {
+                Party = Parties_,
+                party_ = party,
+                SearchTerm = searchTerm,
+                SortColumn = sortColumn,
+                SortDirection = sortDirection,
+                CurrentPage = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                TotalPages = totalPages
+            };
+            return Ok(parties);
         }
     
     }
