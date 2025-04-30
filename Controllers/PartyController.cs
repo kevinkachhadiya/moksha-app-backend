@@ -20,7 +20,7 @@ namespace MAPI.Controllers
             _context = context;
         }
         [HttpPost("CreateParty")]
-        public async Task<IActionResult> CreateParty([FromBody] Party p) // Note: "Party" not "party"  
+        public async Task<IActionResult> CreateParty([FromBody] Party p)
         {
             var record = await _context.Party.FirstOrDefaultAsync(ph => ph.P_number == p.P_number && ph.p_t == p.p_t );
 
@@ -70,6 +70,96 @@ namespace MAPI.Controllers
             }
         }
 
+
+        [HttpPut("EditParty")]
+        public async Task<IActionResult> EditParty([FromBody] Party p)
+        {
+
+            var record = await _context.Party.FirstOrDefaultAsync(ph => ph.P_number == p.P_number && ph.p_t == p.p_t && ph.Id != p.Id);
+
+            if (record != null)
+            {
+                return BadRequest("Phonenumber is already registered in " + p.p_t.ToString() + " section");
+            }
+
+            // Validate all fields  
+            var errors = new List<string>();
+
+            if (string.IsNullOrWhiteSpace(p.P_Name))
+                errors.Add("Party name is required");
+            else if (p.P_Name.Length < 3)
+                errors.Add("Party name must be at least 3 characters");
+            if (string.IsNullOrWhiteSpace(p.P_number))
+                errors.Add("Phone number is required");
+            else if (p.P_number.Length != 10 || !p.P_number.All(char.IsDigit))
+                errors.Add("Phone number must be exactly 10 digits");
+            if (!Enum.IsDefined(typeof(Party.P_t), p.p_t))
+                errors.Add("Invalid party type selected");
+            if (!p.IsActive)
+                errors.Add("Party must be active");
+            if (errors.Any())
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Validation failed",
+                    errors
+                });
+            }
+            try
+            {
+                var existingParty = await _context.Party.FindAsync(p.Id);
+                if (existingParty != null)
+                {
+                    existingParty.P_Name = p.P_Name;
+                    existingParty.P_number = p.P_number;
+                    existingParty.p_t = p.p_t;
+                    existingParty.P_Address = p.P_Address;
+                    existingParty.IsActive = p.IsActive;
+
+                    await _context.SaveChangesAsync();
+                    return Ok(new { success = true, id = p.Id });
+                }
+                else
+                {
+                    return BadRequest("Problem is accure while fetching data on the " + p.p_t.ToString() + " section");
+                  
+
+                }
+                
+               
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Error saving to database",
+                    error = ex.Message
+                });
+            }
+        }
+
+        [HttpDelete("Delete/{id}")]
+        public async Task<IActionResult> DeleteParty(int id)
+        {
+            var record = await _context.Party.Where(p=>p.IsActive == true).FirstOrDefaultAsync(p1=>p1.Id == id);
+            if (record != null)
+            {
+                record.IsActive = false;
+                await _context.SaveChangesAsync();
+                return Ok($"Party deleted successfully from the {record.p_t} section.");
+
+
+            }
+            else 
+            {
+                return NotFound(new { message = "Record not found for the given ID." });
+
+            }
+
+        }
+        
         [HttpGet("SupplierSearch")]
         public async Task<IActionResult> SupplierSearch([FromQuery]string search)
         {
