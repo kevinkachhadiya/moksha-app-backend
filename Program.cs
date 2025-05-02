@@ -18,7 +18,16 @@ string connectionString;
 if (env.IsDevelopment())
 {
     connectionString = builder.Configuration.GetConnectionString("DevDB")
-                       ?? throw new ArgumentNullException("DevDB connection string is missing.");
+                      ?? throw new ArgumentNullException("DevDB connection string is missing.");
+
+    // Use the connection string for Npgsql (PostgreSQL)
+   // builder.Services.AddDbContext<AppDbContext>(options =>
+       // options.UseNpgsql(connectionString));
+  
+    builder.Services.AddDbContext<AppDbContext>(options =>
+      options.UseSqlServer(builder.Configuration.GetConnectionString("DevDB")));
+
+
 }
 else
 {
@@ -28,12 +37,14 @@ else
     if (connectionString.StartsWith("postgres://"))
     {
         connectionString = ConvertPostgresUrlToConnectionString(connectionString);
+        builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseNpgsql(connectionString));
     }
 }
 
+
+
 //builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DevDB")));
 builder.Services.AddScoped<MAPI.Services.StockService>();
 builder.Services.AddScoped<MAPI.Controllers.BillingServices>();
 builder.Services.AddScoped<MAPI.Controllers.SellerBillingController>();
