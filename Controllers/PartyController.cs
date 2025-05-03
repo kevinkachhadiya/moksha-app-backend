@@ -192,6 +192,38 @@ namespace MAPI.Controllers
 
         }
 
+        [HttpGet("CustomerSearch")]
+        public async Task<IActionResult> CustomerSearch([FromQuery] string search)
+        {
+            if (string.IsNullOrWhiteSpace(search))
+            {
+                return BadRequest("Only White Space are not allowed");
+            }
+
+            // Filter based on the search term (case-insensitive)
+            var filteredSuppliers = _context.Party
+               .Where(s => s.P_Name.ToLower().Contains(search.ToLower()) && s.p_t == P_t.Customer && s.IsActive == true)
+                .Take(10) // Limit results to prevent overwhelming the UI
+                .Select(s => new
+                {
+                    P_Name = s.P_Name,
+                    P_number = s.P_number
+                })
+                .ToList();
+
+            if (filteredSuppliers.Count() >= 1)
+            {
+                return Ok(filteredSuppliers);
+
+            }
+            else
+            {
+                return BadRequest("Zero record found");
+
+            }
+
+        }
+
         [HttpGet("AllParty")]
 
         public async Task<IActionResult> AllParty(
