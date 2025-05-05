@@ -77,7 +77,9 @@ namespace MAPI.Controllers
                     TotalBags = s.TotalBags,
                     Weight = s.Weight,
                     AvailableStock = s.AvailableStock,
-                    isActive = s.isActive
+                    isActive = s.isActive,
+                    price = s.Material.BasePrice
+
                 })
                 .ToListAsync();
 
@@ -91,6 +93,7 @@ namespace MAPI.Controllers
                 PageSize = pageSize,
                 TotalItems = totalItems,
                 TotalPages = totalPages
+                
             };
 
             return Ok(viewModel);

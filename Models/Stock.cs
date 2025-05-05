@@ -50,7 +50,8 @@ public class Stock_
     public decimal TotalWeight => TotalBags * Weight;
     public decimal AvailableStock { get; set; }
     public bool isActive { get; set; }
-  
+    public decimal price { get; set; }
+
 }
 public class stockListViewModel
 {

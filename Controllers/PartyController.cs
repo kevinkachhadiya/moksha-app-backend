@@ -7,7 +7,6 @@ using Microsoft.IdentityModel.Tokens;
 using System.Diagnostics;
 using System.Globalization;
 using static MAPI.Models.Party;
-
 namespace MAPI.Controllers
 {
     [Route("api/[controller]")]
