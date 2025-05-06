@@ -14,7 +14,6 @@ namespace MAPI.Controllers
     {
         private readonly AppDbContext _context;
         private readonly StockService _stockService;
-
         public Stock_Management(AppDbContext context, StockService stockService)
         {
             _context = context;
@@ -30,7 +29,7 @@ namespace MAPI.Controllers
     [FromQuery] int page = 1,
     [FromQuery] int pageSize = 12)
         {
-            IQueryable<Stock> query = _context.Stocks
+           IQueryable<Stock> query = _context.Stocks
                 .Include(s => s.Material)
                 .Where(s => s.isActive);
 
