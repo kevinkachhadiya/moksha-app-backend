@@ -5,9 +5,6 @@ namespace MAPI.Models
 {
     public class Party
     {
-
-        
-        
             [Key]
             [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
             public int Id { get; set; }
@@ -28,5 +25,15 @@ namespace MAPI.Models
             public string P_Address { get; set; } = string.Empty;
 
        
+    }
+
+    public class States
+    {
+
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
+        public string StateName { get; set; } = "";
+
     }
 }

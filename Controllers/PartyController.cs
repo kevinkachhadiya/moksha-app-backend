@@ -205,8 +205,10 @@ namespace MAPI.Controllers
                 .Take(10) // Limit results to prevent overwhelming the UI
                 .Select(s => new
                 {
+                    Id = s.Id,
                     P_Name = s.P_Name,
-                    P_number = s.P_number
+                    P_number = s.P_number,
+                    P_Address = s.P_Address
                 })
                 .ToList();
 
@@ -313,6 +315,16 @@ namespace MAPI.Controllers
             };
             return Ok(parties);
         }
-    
+        [HttpGet("getAllStates")]
+
+        public async Task<IActionResult> getAllStates()
+        {
+            var states = await  _context.states.ToListAsync();
+
+            return Ok(states);
+
+        }
+
+
     }
 }
