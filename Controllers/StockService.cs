@@ -176,7 +176,7 @@ namespace MAPI.Services
 
 
         /*-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
-        public async Task<S_Bill> S_CreateBillAsync(S_Bill newBill)
+      /*  public async Task<S_Bill> S_CreateBillAsync(S_Bill newBill)
         {
             if (newBill == null)
             {
@@ -525,7 +525,7 @@ namespace MAPI.Services
             return File(fileBytes, "application/pdf", fileName);
         }
 
-
+        */
     }
 }
 

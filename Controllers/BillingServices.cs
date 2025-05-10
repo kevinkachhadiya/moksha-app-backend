@@ -502,7 +502,7 @@ namespace MAPI.Controllers
             }
         }
 
-        public void Generate_Invoice_WithOut_Gst(string fileName, List<S_Bill> bills)
+       /* public void Generate_Invoice_WithOut_Gst(string fileName, List<S_Bill> bills)
         {
             // Validate bills input
             if (bills == null || bills.Count == 0)
@@ -706,7 +706,7 @@ namespace MAPI.Controllers
             }
         }
 
-
+        */
 
     }
 }

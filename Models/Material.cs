@@ -16,7 +16,6 @@ namespace MAPI.Models
         public string ColorName { get; set; } = null!;  // Non-nullable with initialization
 
         [Required]
-        [Column(TypeName = "decimal(18,2)")]
         public decimal BasePrice { get; set; }
         
         [Required]

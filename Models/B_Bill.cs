@@ -22,7 +22,6 @@ namespace MAPI.Models
 
         public List<B_BillItem> Items { get; set; } // Initialized in constructor
 
-        [Column(TypeName = "decimal(10,2)")]
         public decimal TotalBillPrice { get; set; }
 
         [Required]
@@ -45,7 +44,8 @@ namespace MAPI.Models
         {
             Cash,
             CreditCard,
-            BankTransfer
+            BankTransfer,
+            Due
         }
         public string P_number { get; set; } = string.Empty;
     }
@@ -63,7 +63,6 @@ namespace MAPI.Models
         public decimal Quantity { get; set; }
 
         [Required]
-        [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; }
 
         // Navigation property (nullable if not always loaded)

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Net;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,21 +16,24 @@ builder.Configuration.AddEnvironmentVariables();
 
 // ✅ Configure Database Connection
 string connectionString;
+
+
 if (env.IsDevelopment())
 {
     connectionString = builder.Configuration.GetConnectionString("DevDB")
                       ?? throw new ArgumentNullException("DevDB connection string is missing.");
 
     // Use the connection string for Npgsql (PostgreSQL)
-   // builder.Services.AddDbContext<AppDbContext>(options =>
-       // options.UseNpgsql(connectionString));
-  
+    // builder.Services.AddDbContext<AppDbContext>(options =>
+    // options.UseNpgsql(connectionString));
+
     builder.Services.AddDbContext<AppDbContext>(options =>
-      options.UseSqlServer(builder.Configuration.GetConnectionString("DevDB")));
+       options.UseNpgsql(builder.Configuration.GetConnectionString("DevDB"),
+       npgsqlOptions => npgsqlOptions.RemoteCertificateValidationCallback((sender, certificate, chain, errors) => true)));
 
 
 }
-else
+/*else
 {
     connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
                        ?? throw new ArgumentNullException("DATABASE_URL is missing.");
@@ -40,11 +44,11 @@ else
         builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseNpgsql(connectionString));
     }
-}
+}*/
 
 
 
-//builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+//builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("DevDB")));
 builder.Services.AddScoped<MAPI.Services.StockService>();
 builder.Services.AddScoped<MAPI.Controllers.BillingServices>();
 builder.Services.AddScoped<MAPI.Controllers.SellerBillingController>();

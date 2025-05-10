@@ -21,16 +21,12 @@ namespace MAPI.Models
         public int TotalBags { get; set; }
 
         [Required]
-        [Column(TypeName = "decimal(18,2)")]
         public decimal Weight { get; set; }
 
-        [Column(TypeName = "decimal(18,2)")]
         public decimal TotalWeight => TotalBags * Weight;
 
-        [Column(TypeName = "decimal(18,2)")]  // Add this to AvailableStock
         public decimal AvailableStock { get; set; }
 
-        [Column(TypeName = "decimal(18,2)")]
         public decimal ExtraWeight { get; set; }
 
         [JsonIgnore]
