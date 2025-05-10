@@ -26,25 +26,28 @@ if (env.IsDevelopment())
     // Use the connection string for Npgsql (PostgreSQL)
     // builder.Services.AddDbContext<AppDbContext>(options =>
     // options.UseNpgsql(connectionString));
-
     builder.Services.AddDbContext<AppDbContext>(options =>
-       options.UseNpgsql(builder.Configuration.GetConnectionString("DevDB"),
-       npgsqlOptions => npgsqlOptions.RemoteCertificateValidationCallback((sender, certificate, chain, errors) => true)));
+  options.UseNpgsql(builder.Configuration.GetConnectionString("DevDB"),
+  npgsqlOptions => npgsqlOptions.RemoteCertificateValidationCallback((sender, certificate, chain, errors) => true)));
+
+
 
 
 }
-/*else
+else
 {
-    connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
-                       ?? throw new ArgumentNullException("DATABASE_URL is missing.");
+    // connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
+    //    ?? throw new ArgumentNullException("DATABASE_URL is missing.");
 
-    if (connectionString.StartsWith("postgres://"))
-    {
-        connectionString = ConvertPostgresUrlToConnectionString(connectionString);
-        builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseNpgsql(connectionString));
-    }
-}*/
+    connectionString = builder.Configuration.GetConnectionString("DevDB")
+                     ?? throw new ArgumentNullException("DevDB connection string is missing.");
+
+    builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DevDB"),
+    npgsqlOptions => npgsqlOptions.RemoteCertificateValidationCallback((sender, certificate, chain, errors) => true)));
+
+}
+
 
 
 
